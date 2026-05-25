@@ -1,0 +1,43 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+web_dist
+.tmp/
+.pytest_cache/
+# Virtual environments
+.venv/
+.idea
+data/
+config.json
+edit
+
+docker-compose.local.yml
+docker-compose-local.yml
+
+.claude/settings.local.json
+
+# Environment variables
+.env
+.env.local
+.env.*
+!.env.example
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Git cache
+git_cache/
+
+# Frontend dependencies and build output
+web/node_modules/
+web/.next/
+web/out/
+web/coverage/
+web/.vercel/
+web/*.tsbuildinfo
