@@ -877,8 +877,13 @@ export function ImageComposer({
   };
 
   return (
-    <div className="shrink-0 flex justify-center">
-      <div style={{ width: "min(980px, 100%)" }}>
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="border-b border-rose-100/70 px-4 py-4">
+        <div className="text-base font-bold text-stone-950">Prompt 创作台</div>
+        <div className="mt-1 text-sm text-stone-500">图像生成 · 参考图编辑</div>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
         {mode === "edit" && (
           <input
             ref={fileInputRef}
@@ -892,6 +897,34 @@ export function ImageComposer({
           />
         )}
 
+        <div className="mb-4 grid grid-cols-2 gap-2">
+          <ModeButton active={mode === "generate"} onClick={() => onModeChange("generate")}>
+            文生图
+          </ModeButton>
+          <ModeButton active={mode === "edit"} onClick={() => onModeChange("edit")}>
+            图生图
+          </ModeButton>
+        </div>
+
+        <div className="mb-4 grid grid-cols-2 gap-3 rounded-lg bg-white/45 p-3">
+          <div>
+            <div className="text-xs text-stone-500">模型</div>
+            <div className="mt-1 text-sm font-bold text-stone-950">gpt-image-2</div>
+          </div>
+          <div>
+            <div className="text-xs text-stone-500">生成张数</div>
+            <div className="mt-1 text-sm font-bold text-stone-950">{Math.max(1, Math.min(10, Number(imageCount) || 1))} / 最多 10</div>
+          </div>
+          <div>
+            <div className="text-xs text-stone-500">剩余额度</div>
+            <div className="mt-1 text-sm font-bold text-stone-950">{availableQuota}</div>
+          </div>
+          <div>
+            <div className="text-xs text-stone-500">活动任务</div>
+            <div className="mt-1 text-sm font-bold text-stone-950">{activeTaskCount} 个处理中</div>
+          </div>
+        </div>
+
         {mode === "edit" && referenceImages.length > 0 ? (
           <div className="mb-3 flex flex-wrap gap-2 px-1">
             {referenceImages.map((image, index) => (
@@ -902,7 +935,7 @@ export function ImageComposer({
                     setLightboxIndex(index);
                     setLightboxOpen(true);
                   }}
-                  className="group size-16 overflow-hidden rounded-2xl border border-stone-200 bg-stone-50 transition hover:border-stone-300"
+                  className="group size-16 overflow-hidden rounded-lg border border-rose-100 bg-rose-50/70 transition hover:border-rose-200"
                   aria-label={`预览参考图 ${image.name || index + 1}`}
                 >
                   <img
@@ -917,7 +950,7 @@ export function ImageComposer({
                     event.stopPropagation();
                     onRemoveReferenceImage(index);
                   }}
-                  className="absolute -right-1 -top-1 inline-flex size-5 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-500 transition hover:border-stone-300 hover:text-stone-800"
+                  className="absolute -top-1 -right-1 inline-flex size-5 items-center justify-center rounded-full border border-rose-100 bg-white text-stone-500 transition hover:border-rose-200 hover:text-rose-600"
                   aria-label={`移除参考图 ${image.name || index + 1}`}
                 >
                   <X className="size-3" />
@@ -928,7 +961,7 @@ export function ImageComposer({
         ) : null}
 
         <div className="mb-3 space-y-2 px-1">
-          <div className="hide-scrollbar flex snap-x gap-2 overflow-x-auto pb-1 sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 lg:grid-cols-3">
+          <div className="grid grid-cols-2 gap-2">
             {quickPromptItems.map((item, index) => {
               const active = item.id === activePresetId;
               const PresetIcon = getPromptIcon(item);
@@ -938,16 +971,16 @@ export function ImageComposer({
                   type="button"
                   onClick={() => handleBananaPromptSelect(item)}
                   className={cn(
-                    "flex min-h-14 w-[min(76vw,300px)] shrink-0 snap-start items-center gap-2.5 rounded-2xl border px-3 py-2.5 text-left transition sm:min-h-16 sm:w-auto sm:shrink sm:gap-3 sm:px-4 sm:py-3",
+                    "flex min-h-14 items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left transition",
                     active
-                      ? "border-stone-900 bg-stone-950 text-white shadow-sm"
-                      : "border-stone-200 bg-white text-stone-800 hover:border-stone-300 hover:bg-stone-50",
+                      ? "border-rose-100 bg-[#2d1d26] text-white shadow-sm"
+                      : "border-rose-100 bg-white/72 text-stone-800 hover:border-rose-200 hover:bg-white",
                   )}
                 >
                   <span
                     className={cn(
-                      "inline-flex size-8 shrink-0 items-center justify-center rounded-full sm:size-9",
-                      active ? "bg-white/15 text-white" : "bg-stone-100 text-stone-600",
+                      "inline-flex size-8 shrink-0 items-center justify-center rounded-full",
+                      active ? "bg-white/15 text-white" : "bg-rose-50 text-rose-500",
                     )}
                   >
                     <PresetIcon className="size-4" />
@@ -966,7 +999,7 @@ export function ImageComposer({
             <button
               type="button"
               onClick={() => setIsPromptLibraryOpen(true)}
-              className="inline-flex h-9 items-center gap-2 rounded-full border border-stone-200 bg-white px-3 text-sm font-medium text-stone-700 transition hover:border-stone-300 hover:bg-stone-50"
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-rose-100 bg-white/75 px-3 text-sm font-medium text-stone-700 transition hover:border-rose-200 hover:bg-white"
             >
               <Images className="size-4" />
               更多提示词
@@ -975,9 +1008,9 @@ export function ImageComposer({
         </div>
 
         <Dialog open={isPromptLibraryOpen} onOpenChange={setIsPromptLibraryOpen}>
-          <DialogContent className="flex h-[84vh] w-[min(94vw,1040px)] max-w-none flex-col overflow-hidden rounded-[28px] border-stone-200 bg-white p-0">
-            <DialogHeader className="border-b border-stone-200 px-5 pt-5 pb-4 sm:px-6">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <DialogContent className="flex h-[84vh] w-[min(94vw,1040px)] max-w-none flex-col overflow-hidden rounded-lg p-0">
+            <DialogHeader className="border-b border-rose-100 px-5 pt-5 pb-4 sm:px-6">
+              <div className="flex flex-col gap-3 pr-10 sm:flex-row sm:items-start sm:justify-between sm:pr-12">
                 <div className="min-w-0">
                   <DialogTitle className="text-xl font-semibold text-stone-950">更多提示词</DialogTitle>
                   <DialogDescription className="mt-2 leading-6 text-stone-500">
@@ -989,7 +1022,7 @@ export function ImageComposer({
                   type="button"
                   asChild
                   variant="outline"
-                  className="h-9 shrink-0 rounded-full border-stone-200 bg-white text-stone-700"
+                  className="h-9 shrink-0 rounded-lg border-rose-100 bg-white/75 text-stone-700"
                 >
                   <a href="/prompt-manager">
                     <ExternalLink className="size-4" />
@@ -1004,7 +1037,7 @@ export function ImageComposer({
                     value={bananaPromptQuery}
                     onChange={(event) => setBananaPromptQuery(event.target.value)}
                     placeholder="搜索标题、作者、分类或提示词内容"
-                    className="h-10 rounded-full border-stone-200 bg-stone-50 pl-9 text-sm shadow-none focus-visible:bg-white"
+                    className="h-10 rounded-lg border-rose-100 bg-white/70 pl-9 text-sm shadow-none focus-visible:bg-white"
                   />
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -1014,10 +1047,10 @@ export function ImageComposer({
                       type="button"
                       onClick={() => setBananaPromptCategory(category)}
                       className={cn(
-                        "h-9 shrink-0 rounded-full border px-3 text-xs font-medium transition",
+                        "h-9 shrink-0 rounded-lg border px-3 text-xs font-medium transition",
                         category === bananaPromptCategory
-                          ? "border-stone-900 bg-stone-950 text-white"
-                          : "border-stone-200 bg-white text-stone-600 hover:border-stone-300 hover:text-stone-900",
+                          ? "border-rose-100 bg-[#2d1d26] text-white"
+                          : "border-rose-100 bg-white/75 text-stone-600 hover:border-rose-200 hover:text-stone-900",
                       )}
                     >
                       {category}
@@ -1027,7 +1060,7 @@ export function ImageComposer({
               </div>
             </DialogHeader>
 
-            <div className="min-h-0 flex-1 overflow-y-auto bg-stone-50/70 px-4 py-4 sm:px-6">
+            <div className="min-h-0 flex-1 overflow-y-auto bg-rose-50/35 px-4 py-4 sm:px-6">
               {bananaPromptStatus === "loading" || bananaPromptStatus === "idle" ? (
                 <div className="flex h-full min-h-[260px] items-center justify-center">
                   <div className="flex items-center gap-2 text-sm text-stone-500">
@@ -1043,7 +1076,7 @@ export function ImageComposer({
                     <Button
                       type="button"
                       variant="outline"
-                      className="mt-4 rounded-full border-stone-200 bg-white"
+                      className="mt-4 rounded-lg border-rose-100 bg-white"
                       onClick={() => {
                         setBananaPromptStatus("idle");
                         setBananaPromptRetryKey((key) => key + 1);
@@ -1064,7 +1097,7 @@ export function ImageComposer({
                     return (
                       <article
                         key={`${item.title}-${item.created || index}`}
-                        className="overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm"
+                        className="overflow-hidden rounded-lg border border-rose-100 bg-white/85 shadow-sm"
                       >
                         <div className="aspect-[4/3] bg-stone-100">
                           {previewUrl ? (
@@ -1102,7 +1135,7 @@ export function ImageComposer({
                             <Button
                               type="button"
                               size="sm"
-                              className="h-8 shrink-0 rounded-full bg-stone-950 text-white hover:bg-stone-800"
+                            className="h-8 shrink-0 rounded-lg text-white"
                               onClick={() => handleBananaPromptSelect(item)}
                             >
                               使用
@@ -1118,7 +1151,7 @@ export function ImageComposer({
           </DialogContent>
         </Dialog>
 
-        <div className="rounded-[28px] border border-stone-200 bg-white sm:rounded-[32px]">
+        <div className="yan-panel-strong rounded-lg">
           <div
             className="relative cursor-text"
             onClick={() => {
@@ -1146,35 +1179,34 @@ export function ImageComposer({
                   void onSubmit();
                 }
               }}
-              className="min-h-[112px] resize-none rounded-[28px] border-0 bg-transparent px-4 pt-4 pb-3 text-[15px] leading-7 text-stone-900 shadow-none placeholder:text-stone-400 focus-visible:ring-0 sm:min-h-[148px] sm:rounded-[32px] sm:px-6 sm:pt-6 sm:pb-20"
+              className="min-h-[170px] resize-none rounded-lg border-0 bg-transparent px-4 pt-4 pb-4 text-[15px] leading-7 text-stone-900 shadow-none placeholder:text-stone-400 focus-visible:ring-0"
             />
 
-            <div className="border-t border-stone-100 bg-white px-3 pb-3 pt-3 sm:absolute sm:inset-x-0 sm:bottom-0 sm:border-t-0 sm:bg-gradient-to-t sm:from-white sm:via-white/95 sm:to-transparent sm:px-6 sm:pb-4 sm:pt-6">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
+            <div className="border-t border-rose-100 bg-white/80 px-3 py-3">
+              <div className="flex flex-col gap-3">
+                <div className="grid min-w-0 flex-1 grid-cols-2 gap-2">
                   {mode === "edit" && (
                     <Button
                       type="button"
                       variant="outline"
-                      className="col-span-2 h-9 rounded-full border-stone-200 bg-white px-3 text-xs font-medium text-stone-700 shadow-none sm:col-span-1 sm:h-10 sm:px-4 sm:text-sm"
+                      className="col-span-2 h-10 rounded-lg border-rose-100 bg-white/85 px-3 text-sm font-medium text-stone-700 shadow-none"
                       onClick={onPickReferenceImage}
                     >
-                      <ImagePlus className="size-3.5 sm:size-4" />
-                      <span className="hidden sm:inline">{referenceImages.length > 0 ? "继续添加参考图" : "上传参考图"}</span>
-                      <span className="sm:hidden">{referenceImages.length > 0 ? "继续" : "上传"}</span>
+                      <ImagePlus className="size-4" />
+                      <span>{referenceImages.length > 0 ? "继续添加参考图" : "上传参考图"}</span>
                     </Button>
                   )}
-                  <div className="inline-flex h-9 items-center justify-center rounded-full bg-stone-100 px-3 text-[11px] font-medium text-stone-600 sm:h-auto sm:px-3 sm:py-2 sm:text-xs">
+                  <div className="inline-flex h-9 items-center justify-center rounded-lg bg-rose-50 px-3 text-xs font-medium text-stone-600">
                     <span className="mr-1">额度</span>{availableQuota}
                   </div>
                   {activeTaskCount > 0 && (
-                    <div className="col-span-2 flex h-9 items-center justify-center gap-1 rounded-full bg-amber-50 px-3 text-[11px] font-medium text-amber-700 sm:col-span-1 sm:h-auto sm:gap-1.5 sm:px-3 sm:py-2 sm:text-xs">
+                    <div className="col-span-2 flex h-9 items-center justify-center gap-1.5 rounded-lg bg-amber-50 px-3 text-xs font-medium text-amber-700">
                       <LoaderCircle className="size-3 animate-spin" />
-                      {activeTaskCount}<span className="hidden sm:inline"> 个任务处理中</span>
+                      {activeTaskCount}<span> 个任务处理中</span>
                     </div>
                   )}
-                  <div className="flex h-9 items-center justify-center gap-1.5 rounded-full border border-stone-200 bg-white px-2 sm:h-auto sm:gap-2 sm:px-3 sm:py-1">
-                    <span className="text-[11px] font-medium text-stone-700 sm:text-sm">张数</span>
+                  <div className="flex h-9 items-center justify-center gap-2 rounded-lg border border-rose-100 bg-white/85 px-3">
+                    <span className="text-sm font-medium text-stone-700">张数</span>
                     <Input
                       type="number"
                       min="1"
@@ -1182,24 +1214,24 @@ export function ImageComposer({
                       step="1"
                       value={imageCount}
                       onChange={(event) => onImageCountChange(event.target.value)}
-                      className="h-7 w-[40px] border-0 bg-transparent px-0 text-center text-xs font-medium text-stone-700 shadow-none focus-visible:ring-0 sm:h-8 sm:w-[64px] sm:text-sm"
+                      className="h-7 w-[44px] border-0 bg-transparent px-0 text-center text-sm font-medium text-stone-700 shadow-none focus-visible:ring-0"
                     />
                   </div>
                   <div
                     ref={sizeMenuRef}
-                    className="relative col-span-2 flex h-9 items-center gap-1.5 rounded-full border border-stone-200 bg-white px-3 text-[11px] sm:col-span-1 sm:h-auto sm:gap-2 sm:py-1 sm:text-[13px]"
+                    className="relative col-span-2 flex h-9 items-center gap-2 rounded-lg border border-rose-100 bg-white/85 px-3 text-sm"
                   >
-                    <span className="font-medium text-stone-700 sm:text-sm">比例</span>
+                    <span className="font-medium text-stone-700">比例</span>
                     <button
                       type="button"
-                      className="flex h-7 min-w-0 flex-1 items-center justify-between bg-transparent text-left text-xs font-bold text-stone-700 sm:h-8 sm:w-[132px] sm:flex-none"
+                      className="flex h-7 min-w-0 flex-1 items-center justify-between bg-transparent text-left text-sm font-bold text-stone-700"
                       onClick={() => setIsSizeMenuOpen((open) => !open)}
                     >
                       <span className="truncate">{imageSizeLabel}</span>
                       <ChevronDown className={cn("size-4 shrink-0 opacity-60 transition", isSizeMenuOpen && "rotate-180")} />
                     </button>
                     {isSizeMenuOpen ? (
-                      <div className="absolute bottom-[calc(100%+10px)] left-0 z-50 w-full overflow-hidden rounded-3xl border border-white/80 bg-white p-2 shadow-[0_24px_80px_-32px_rgba(15,23,42,0.35)] sm:w-[186px]">
+                      <div className="absolute bottom-[calc(100%+10px)] left-0 z-50 w-full overflow-hidden rounded-lg border border-white/80 bg-white p-2 shadow-[0_24px_80px_-32px_rgba(84,38,62,0.35)]">
                         {imageSizeOptions.map((option) => {
                           const active = option.value === imageSize;
                           return (
@@ -1207,8 +1239,8 @@ export function ImageComposer({
                               key={option.label}
                               type="button"
                               className={cn(
-                                "flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm text-stone-700 transition hover:bg-stone-100",
-                                active && "bg-stone-100 font-medium text-stone-950",
+                                "flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm text-stone-700 transition hover:bg-rose-50",
+                                active && "bg-rose-50 font-medium text-stone-950",
                               )}
                               onClick={() => {
                                 onImageSizeChange(option.value);
@@ -1224,24 +1256,17 @@ export function ImageComposer({
                     ) : null}
                   </div>
 
-                  <div className="col-span-2 grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-2">
-                    <ModeButton active={mode === "generate"} onClick={() => onModeChange("generate")}>
-                      文生图
-                    </ModeButton>
-                    <ModeButton active={mode === "edit"} onClick={() => onModeChange("edit")}>
-                      图生图
-                    </ModeButton>
-                  </div>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => void onSubmit()}
                   disabled={!prompt.trim() || (mode === "edit" && referenceImages.length === 0)}
-                  className="inline-flex size-11 shrink-0 items-center justify-center self-end rounded-full bg-stone-950 text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-300 sm:size-11"
+                  className="yan-gradient inline-flex h-11 w-full shrink-0 items-center justify-center rounded-lg text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:bg-stone-300 disabled:brightness-100"
                   aria-label={mode === "edit" ? "编辑图片" : "生成图片"}
                 >
-                  <ArrowUp className="size-3.5 sm:size-4" />
+                  <ArrowUp className="size-4" />
+                  <span>{mode === "edit" ? "编辑图片" : "生成图片"}</span>
                 </button>
               </div>
             </div>
@@ -1266,8 +1291,8 @@ function ModeButton({
       type="button"
       onClick={onClick}
       className={cn(
-        "rounded-full px-2.5 py-1.5 text-xs font-medium transition sm:px-4 sm:py-2 sm:text-sm",
-        active ? "bg-stone-950 text-white" : "bg-stone-100 text-stone-600 hover:bg-stone-200",
+        "rounded-lg px-2.5 py-1.5 text-xs font-medium transition sm:px-4 sm:py-2 sm:text-sm",
+        active ? "bg-[#2d1d26] text-white" : "bg-rose-50 text-stone-600 hover:bg-rose-100",
       )}
     >
       {children}

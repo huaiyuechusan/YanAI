@@ -75,7 +75,7 @@ function MyImagesContent() {
         </div>
       </div>
 
-      <Card className="rounded-2xl border-white/80 bg-white/90 shadow-sm">
+      <Card className="rounded-lg border-white/80 bg-white/80 shadow-sm">
         <CardContent className="p-0">
           <div className="flex items-center gap-2 border-b border-rose-50 px-5 py-4 text-sm text-stone-600">
             <ImageIcon className="size-4 text-rose-500" />

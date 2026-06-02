@@ -75,7 +75,7 @@ function ProfileContent() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="rounded-2xl border-white/80 bg-white/90 shadow-sm md:col-span-2">
+        <Card className="rounded-lg border-white/80 bg-white/80 shadow-sm md:col-span-2">
           <CardContent className="space-y-5 p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -96,7 +96,7 @@ function ProfileContent() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-white/80 bg-white/90 shadow-sm">
+        <Card className="rounded-lg border-white/80 bg-white/80 shadow-sm">
           <CardContent className="space-y-2 p-6">
             <div className="rounded-2xl bg-rose-50 p-3 text-rose-500 w-fit">
               <Sparkles className="size-5" />
@@ -108,7 +108,7 @@ function ProfileContent() {
         </Card>
       </div>
 
-      <Card className="rounded-2xl border-white/80 bg-white/90 shadow-sm">
+      <Card className="rounded-lg border-white/80 bg-white/80 shadow-sm">
         <CardContent className="space-y-4 p-6">
           <div className="flex items-center gap-2 text-sm font-semibold text-stone-800">
             <Gift className="size-4 text-rose-500" />

@@ -264,7 +264,7 @@ function PromptManagerContent() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 rounded-2xl border border-white/80 bg-white/90 p-4 shadow-sm">
+      <div className="yan-panel flex flex-col gap-3 rounded-lg p-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="relative min-w-0 flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400" />
@@ -302,7 +302,7 @@ function PromptManagerContent() {
           正在加载提示词
         </div>
       ) : filteredItems.length === 0 ? (
-        <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-dashed border-stone-200 bg-white/70 text-sm text-stone-500">
+        <div className="flex min-h-[320px] items-center justify-center rounded-lg border border-dashed border-rose-100 bg-white/60 text-sm text-stone-500">
           没有找到提示词
         </div>
       ) : (
@@ -352,7 +352,7 @@ function PromptManagerContent() {
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="flex max-h-[88vh] w-[min(94vw,860px)] max-w-none flex-col overflow-hidden rounded-[28px] border-stone-200 bg-white p-0">
+        <DialogContent className="flex max-h-[88vh] w-[min(94vw,860px)] max-w-none flex-col overflow-hidden rounded-lg p-0">
           <DialogHeader className="border-b border-stone-200 px-5 pt-5 pb-4 sm:px-6">
             <DialogTitle className="text-xl font-semibold text-stone-950">
               {editingItem ? "编辑提示词" : "添加提示词"}

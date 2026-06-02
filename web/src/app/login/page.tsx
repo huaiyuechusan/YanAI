@@ -76,7 +76,7 @@ export default function LoginPage() {
 
   return (
     <div className="grid min-h-[calc(100vh-1rem)] w-full place-items-center px-4 py-6">
-      <Card className="w-full max-w-[460px] rounded-[28px] border-white/80 bg-white/95 shadow-[0_28px_90px_rgba(190,24,93,0.12)]">
+      <Card className="w-full max-w-[460px] rounded-lg border-white/80 bg-white/90 shadow-[0_28px_90px_rgba(190,24,93,0.12)]">
         <CardContent className="space-y-7 p-6 sm:p-8">
           <div className="space-y-4 text-center">
             <div className="mx-auto inline-flex size-14 items-center justify-center rounded-[20px] bg-rose-500 text-white shadow-sm">
@@ -118,7 +118,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="邮箱"
-                className="h-12 rounded-2xl border-rose-100 bg-white px-4"
+                className="h-12 rounded-lg border-rose-100 bg-white px-4"
               />
               <Input
                 type="password"
@@ -128,7 +128,7 @@ export default function LoginPage() {
                   if (event.key === "Enter") void handleLogin();
                 }}
                 placeholder="密码"
-                className="h-12 rounded-2xl border-rose-100 bg-white px-4"
+                className="h-12 rounded-lg border-rose-100 bg-white px-4"
               />
             </div>
           ) : (
@@ -141,7 +141,7 @@ export default function LoginPage() {
                   if (event.key === "Enter") void handleLogin();
                 }}
                 placeholder="管理员密钥"
-                className="h-12 rounded-2xl border-rose-100 bg-white px-4"
+                className="h-12 rounded-lg border-rose-100 bg-white px-4"
               />
             </div>
           )}
@@ -159,7 +159,7 @@ export default function LoginPage() {
             <Button
               type="button"
               variant="outline"
-              className="h-12 w-full rounded-2xl border-stone-200 bg-white text-stone-800 hover:bg-stone-50"
+              className="h-12 w-full rounded-lg border-rose-100 bg-white text-stone-800 hover:bg-rose-50"
               onClick={startLinuxDoOAuth}
             >
               使用 Linux DO 登录 / 注册

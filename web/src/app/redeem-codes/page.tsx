@@ -125,7 +125,7 @@ function RedeemCodesContent() {
         </Button>
       </div>
 
-      <Card className="rounded-2xl border-white/80 bg-white/90 shadow-sm">
+      <Card className="rounded-lg border-white/80 bg-white/80 shadow-sm">
         <CardContent className="space-y-4 p-5">
           <div className="flex items-center gap-2 text-sm font-semibold text-stone-800">
             <Plus className="size-4 text-rose-500" />
@@ -144,7 +144,7 @@ function RedeemCodesContent() {
         </CardContent>
       </Card>
 
-      <Card className="overflow-hidden rounded-2xl border-white/80 bg-white/90 shadow-sm">
+      <Card className="overflow-hidden rounded-lg border-white/80 bg-white/80 shadow-sm">
         <CardContent className="p-0">
           <div className="flex flex-wrap items-center gap-3 border-b border-rose-50 px-5 py-3">
             <label className="flex items-center gap-2 text-sm text-stone-500">

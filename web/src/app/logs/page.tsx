@@ -125,7 +125,7 @@ function LogsContent() {
         </div>
       </div>
 
-      <Card className="overflow-hidden rounded-2xl border-white/80 bg-white/90 shadow-sm">
+      <Card className="overflow-hidden rounded-lg border-white/80 bg-white/80 shadow-sm">
         <CardContent className="p-0">
           <div className="flex items-center justify-between border-b border-stone-100 px-5 py-4 text-sm text-stone-600">
             <span>共 {total} 条</span>

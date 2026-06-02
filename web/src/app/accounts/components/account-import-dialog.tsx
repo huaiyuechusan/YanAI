@@ -93,9 +93,9 @@ function MethodCard({
     <button
       type="button"
       onClick={onClick}
-      className="w-full rounded-2xl border border-stone-200 bg-white p-0 text-left transition hover:border-stone-300 hover:bg-stone-50"
+      className="w-full rounded-lg border border-rose-100 bg-white/80 p-0 text-left transition hover:border-rose-200 hover:bg-white"
     >
-      <Card className="rounded-2xl border-0 bg-transparent shadow-none">
+      <Card className="rounded-lg border-0 bg-transparent shadow-none">
         <CardContent className="flex items-start gap-4 p-4">
           <div className="rounded-xl bg-stone-100 p-3 text-stone-700">
             <Icon className="size-5" />
@@ -292,7 +292,7 @@ export function AccountImportDialog({ disabled, onImported }: AccountImportDialo
               className="min-h-56 resize-none rounded-xl border-stone-200"
             />
           </div>
-          <div className="rounded-2xl border border-dashed border-stone-200 bg-stone-50 p-4">
+          <div className="rounded-lg border border-dashed border-rose-100 bg-rose-50/45 p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="space-y-1">
                 <div className="text-sm font-medium text-stone-800">从 TXT 文件导入</div>
@@ -332,7 +332,7 @@ export function AccountImportDialog({ disabled, onImported }: AccountImportDialo
             <ArrowLeft className="size-4" />
             返回导入方式
           </button>
-          <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4 text-sm leading-6 text-stone-600">
+          <div className="rounded-lg border border-rose-100 bg-rose-50/45 p-4 text-sm leading-6 text-stone-600">
             打开
             {" "}
             <a
@@ -346,7 +346,7 @@ export function AccountImportDialog({ disabled, onImported }: AccountImportDialo
             </a>
             ，复制页面返回的完整 JSON，系统会自动提取其中的 `accessToken` 导入。
           </div>
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
             <div className="font-medium">风险提示</div>
             <div>
               不要使用自己的大号，尽量使用不常用的小号进行导入，避免出现封号风险。本项目不承担任何封号风险责任。
@@ -376,7 +376,7 @@ export function AccountImportDialog({ disabled, onImported }: AccountImportDialo
             <ArrowLeft className="size-4" />
             返回导入方式
           </button>
-          <div className="rounded-2xl border border-dashed border-stone-200 bg-stone-50 p-5">
+          <div className="rounded-lg border border-dashed border-rose-100 bg-rose-50/45 p-5">
             <div className="space-y-2">
               <div className="text-sm font-medium text-stone-800">多选本地 CPA JSON 文件</div>
               <div className="text-sm leading-6 text-stone-500">
@@ -402,7 +402,7 @@ export function AccountImportDialog({ disabled, onImported }: AccountImportDialo
             onChange={(event) => void handleCpaSelected(event)}
           />
           {pendingCpaImport ? (
-            <div className="rounded-2xl border border-stone-200 bg-white p-4 text-sm leading-6 text-stone-600">
+            <div className="rounded-lg border border-rose-100 bg-white/80 p-4 text-sm leading-6 text-stone-600">
               最近一次读取到 {pendingCpaImport.parsedFileCount} 个 Token
               {pendingCpaImport.errorCount > 0 ? `，另有 ${pendingCpaImport.errorCount} 个文件未提取成功` : ""}。
             </div>

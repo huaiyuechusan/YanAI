@@ -187,7 +187,7 @@ function UsersPageContent() {
           { label: "正常用户", value: activeCount },
           { label: "剩余额度", value: totalQuota },
         ].map((metric) => (
-          <Card key={metric.label} className="rounded-2xl border-white/80 bg-white/90 shadow-sm">
+          <Card key={metric.label} className="rounded-lg border-white/80 bg-white/80 shadow-sm">
             <CardContent className="flex items-center justify-between p-5">
               <div>
                 <div className="text-sm text-stone-500">{metric.label}</div>
@@ -201,7 +201,7 @@ function UsersPageContent() {
         ))}
       </div>
 
-      <Card className="rounded-2xl border-white/80 bg-white/90 shadow-sm">
+      <Card className="rounded-lg border-white/80 bg-white/80 shadow-sm">
         <CardContent className="space-y-4 p-5">
           <div className="flex items-center gap-2 text-sm font-semibold text-stone-800">
             <Plus className="size-4 text-rose-500" />
@@ -219,7 +219,7 @@ function UsersPageContent() {
         </CardContent>
       </Card>
 
-      <Card className="overflow-hidden rounded-2xl border-white/80 bg-white/90 shadow-sm">
+      <Card className="overflow-hidden rounded-lg border-white/80 bg-white/80 shadow-sm">
         <CardContent className="p-0">
           <div className="flex flex-wrap items-center gap-2 border-b border-rose-50 px-5 py-3">
             <Button

@@ -89,7 +89,7 @@ export function ConfigCard() {
 
   if (isLoadingConfig) {
     return (
-      <Card className="rounded-2xl border-white/80 bg-white/90 shadow-sm">
+      <Card className="rounded-lg border-white/80 bg-white/80 shadow-sm">
         <CardContent className="flex items-center justify-center p-10">
           <LoaderCircle className="size-5 animate-spin text-stone-400" />
         </CardContent>
@@ -98,7 +98,7 @@ export function ConfigCard() {
   }
 
   return (
-    <Card className="rounded-2xl border-white/80 bg-white/90 shadow-sm">
+    <Card className="rounded-lg border-white/80 bg-white/80 shadow-sm">
       <CardContent className="space-y-4 p-6">
         <div className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm leading-6 text-stone-600">
           管理员登录密钥继续从部署配置读取，不再在此页面展示；如需分发给其他人，请在下方创建普通用户密钥。
@@ -321,9 +321,9 @@ export function ConfigCard() {
               <h2 className="text-sm font-semibold text-stone-900">Linux DO OAuth</h2>
               <p className="mt-1 text-xs leading-5 text-stone-500">回调地址需填写到 Linux DO Connect 应用中。</p>
             </div>
-            <div className="flex flex-col gap-2 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-900 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-col gap-2 rounded-lg border border-fuchsia-100 bg-fuchsia-50 px-3 py-2 text-sm text-fuchsia-900 md:flex-row md:items-center md:justify-between">
               <span className="break-all">回调 URL：{linuxDoCallbackUrl}</span>
-              <Button type="button" variant="outline" className="h-8 shrink-0 rounded-lg border-blue-200 bg-white px-3 text-blue-700" onClick={() => void copyLinuxDoCallbackUrl()}>
+              <Button type="button" variant="outline" className="h-8 shrink-0 rounded-lg border-fuchsia-200 bg-white px-3 text-fuchsia-700" onClick={() => void copyLinuxDoCallbackUrl()}>
                 <Copy className="size-3.5" />
                 复制
               </Button>

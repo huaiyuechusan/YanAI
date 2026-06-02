@@ -1,7 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { History, LoaderCircle, Plus, Trash2 } from "lucide-react";
+import {
+  LoaderCircle,
+  Menu,
+  Plus,
+  Search,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { ImageComposer } from "@/app/image/components/image-composer";
@@ -122,6 +128,72 @@ function sortImageConversations(conversations: ImageConversation[]) {
   return [...conversations].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
+function isSameLocalDay(value: string, date = new Date()) {
+  const target = new Date(value);
+  if (Number.isNaN(target.getTime())) {
+    return false;
+  }
+  return (
+    target.getFullYear() === date.getFullYear() &&
+    target.getMonth() === date.getMonth() &&
+    target.getDate() === date.getDate()
+  );
+}
+
+function getWorkspaceStats(conversations: ImageConversation[]) {
+  let todayGenerated = 0;
+  let successImages = 0;
+  let failedImages = 0;
+  let queued = 0;
+  let running = 0;
+
+  for (const conversation of conversations) {
+    const stats = getImageConversationStats(conversation);
+    queued += stats.queued;
+    running += stats.running;
+
+    for (const turn of conversation.turns) {
+      for (const image of turn.images) {
+        if (image.status === "success") {
+          successImages += 1;
+          if (isSameLocalDay(turn.createdAt)) {
+            todayGenerated += 1;
+          }
+        } else if (image.status === "error") {
+          failedImages += 1;
+        }
+      }
+    }
+  }
+
+  const completed = successImages + failedImages;
+  return {
+    todayGenerated,
+    successImages,
+    failedImages,
+    queued,
+    running,
+    active: queued + running,
+    successRate: completed > 0 ? `${((successImages / completed) * 100).toFixed(1)}%` : "--",
+  };
+}
+
+function conversationMatchesQuery(conversation: ImageConversation, query: string) {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) {
+    return true;
+  }
+
+  return (
+    conversation.title.toLowerCase().includes(normalizedQuery) ||
+    conversation.turns.some((turn) =>
+      [turn.prompt, turn.mode, turn.status, turn.size].some((value) =>
+        String(value || "").toLowerCase().includes(normalizedQuery),
+      ),
+    )
+  );
+}
+
 async function recoverConversationHistory(
   items: ImageConversation[],
   ownerKey: string,
@@ -198,6 +270,7 @@ function ImagePageContent({ session }: { session: StoredAuthSession }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [workspaceSearch, setWorkspaceSearch] = useState("");
   const [imagePrompt, setImagePrompt] = useState("");
   const [imageCount, setImageCount] = useState("1");
   const [imageMode, setImageMode] = useState<ImageConversationMode>("generate");
@@ -237,6 +310,11 @@ function ImagePageContent({ session }: { session: StoredAuthSession }) {
       }, 0),
     [conversations],
   );
+  const filteredConversations = useMemo(
+    () => conversations.filter((conversation) => conversationMatchesQuery(conversation, workspaceSearch)),
+    [conversations, workspaceSearch],
+  );
+  const workspaceStats = useMemo(() => getWorkspaceStats(conversations), [conversations]);
   const deleteConfirmTitle = deleteConfirm?.type === "all" ? "清空历史记录" : deleteConfirm?.type === "one" ? "删除对话" : "";
   const deleteConfirmDescription =
     deleteConfirm?.type === "all"
@@ -877,12 +955,13 @@ function ImagePageContent({ session }: { session: StoredAuthSession }) {
 
   return (
     <>
-      <section className="mx-auto grid h-[calc(100dvh-5rem)] min-h-0 w-full max-w-[1380px] grid-cols-1 gap-3 px-0 pb-3 sm:px-3 sm:pb-6 lg:grid-cols-[240px_minmax(0,1fr)]">
-        <div className="hidden h-full min-h-0 border-r border-stone-200/70 pr-3 lg:block">
-          <ImageSidebar
-            conversations={conversations}
+      <section className="grid h-full min-h-0 w-full grid-cols-1 gap-3 overflow-y-auto lg:grid-cols-[300px_minmax(0,1fr)] lg:overflow-hidden xl:grid-cols-[300px_minmax(0,1fr)_420px]">
+        <div className="yan-panel hidden min-h-0 overflow-hidden rounded-lg lg:row-span-2 lg:flex xl:row-span-1">
+          <ImageStudioSidebar
+            conversations={filteredConversations}
             isLoadingHistory={isLoadingHistory}
             selectedConversationId={selectedConversationId}
+            availableQuota={availableQuota}
             onCreateDraft={handleCreateDraft}
             onClearHistory={openClearHistoryConfirm}
             onSelectConversation={setSelectedConversationId}
@@ -892,55 +971,45 @@ function ImagePageContent({ session }: { session: StoredAuthSession }) {
         </div>
 
         <Dialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
-          <DialogContent className="flex h-[80vh] w-[92vw] max-w-[420px] flex-col overflow-hidden rounded-[32px] border-stone-200 bg-white p-0 shadow-2xl">
-            <DialogHeader className="px-6 pt-6 pb-2">
-              <DialogTitle className="flex items-center gap-2 text-lg font-bold">
-                <History className="size-5" />
-                历史记录
-              </DialogTitle>
-            </DialogHeader>
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-8">
-              <ImageSidebar
-                conversations={conversations}
-                isLoadingHistory={isLoadingHistory}
-                selectedConversationId={selectedConversationId}
-                onCreateDraft={() => {
-                  handleCreateDraft();
-                  setIsHistoryOpen(false);
-                }}
-                onClearHistory={openClearHistoryConfirm}
-                onSelectConversation={(id) => {
-                  setSelectedConversationId(id);
-                  setIsHistoryOpen(false);
-                }}
-                onDeleteConversation={openDeleteConversationConfirm}
-                formatConversationTime={formatConversationTime}
-                hideActionButtons
-              />
-            </div>
+          <DialogContent className="flex h-[88vh] w-[92vw] max-w-[430px] flex-col overflow-hidden rounded-lg p-0">
+            <DialogTitle className="sr-only">历史记录</DialogTitle>
+            <ImageStudioSidebar
+              conversations={filteredConversations}
+              isLoadingHistory={isLoadingHistory}
+              selectedConversationId={selectedConversationId}
+              availableQuota={availableQuota}
+              onCreateDraft={() => {
+                handleCreateDraft();
+                setIsHistoryOpen(false);
+              }}
+              onClearHistory={openClearHistoryConfirm}
+              onSelectConversation={(id) => {
+                setSelectedConversationId(id);
+                setIsHistoryOpen(false);
+              }}
+              onDeleteConversation={openDeleteConversationConfirm}
+              formatConversationTime={formatConversationTime}
+            />
           </DialogContent>
         </Dialog>
 
-        <div className="flex min-h-0 flex-col gap-3 sm:gap-4">
-          <div className="flex items-center justify-between gap-3 lg:hidden">
+        <div className="flex min-h-0 flex-col gap-3 overflow-hidden">
+          <div className="flex items-center justify-between gap-2 lg:hidden">
             <Button
               variant="outline"
-              className="h-10 flex-1 rounded-2xl border-stone-200 bg-white/85 text-stone-700 shadow-sm"
+              className="h-10 flex-1 rounded-lg border-rose-100 bg-white/75 text-stone-700 shadow-sm"
               onClick={() => setIsHistoryOpen(true)}
             >
-              <History className="mr-2 size-4" />
+              <Menu className="mr-2 size-4" />
               历史记录 ({conversations.length})
             </Button>
-            <Button
-              className="h-10 rounded-2xl bg-stone-950 text-white shadow-sm"
-              onClick={handleCreateDraft}
-            >
+            <Button className="h-10 rounded-lg text-white shadow-sm" onClick={handleCreateDraft}>
               <Plus className="size-4" />
               新建
             </Button>
             <Button
               variant="outline"
-              className="h-10 rounded-2xl border-stone-200 bg-white/85 px-3 text-stone-600 shadow-sm"
+              className="h-10 rounded-lg border-rose-100 bg-white/75 px-3 text-stone-600 shadow-sm"
               onClick={openClearHistoryConfirm}
               disabled={conversations.length === 0}
             >
@@ -948,18 +1017,58 @@ function ImagePageContent({ session }: { session: StoredAuthSession }) {
             </Button>
           </div>
 
-          <div
-            ref={resultsViewportRef}
-            className="hide-scrollbar min-h-0 flex-1 overflow-y-auto px-2 py-3 sm:px-4 sm:py-4"
-          >
-            <ImageResults
-              selectedConversation={selectedConversation}
-              onOpenLightbox={openLightbox}
-              onContinueEdit={handleContinueEdit}
-              formatConversationTime={formatConversationTime}
-            />
+          <header className="yan-panel flex min-h-16 flex-col gap-3 rounded-lg px-4 py-3 md:flex-row md:items-center">
+            <div className="min-w-0 flex-1">
+              <h1 className="truncate text-2xl font-bold tracking-tight text-stone-950">月光影像创作台</h1>
+              <p className="mt-1 truncate text-sm text-stone-500">
+                gpt-image-2 · 创作队列 {workspaceStats.active} · 当前空间 颜AI Studio
+              </p>
+            </div>
+            <label className="relative w-full md:max-w-[360px]">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400" />
+              <input
+                value={workspaceSearch}
+                onChange={(event) => setWorkspaceSearch(event.target.value)}
+                placeholder="搜索作品、提示词、会话"
+                className="h-10 w-full rounded-lg border border-[var(--yan-border)] bg-white/72 pl-9 pr-3 text-sm text-stone-700 outline-none transition placeholder:text-stone-400 focus:border-rose-200 focus:bg-white focus:ring-4 focus:ring-rose-100/60"
+              />
+            </label>
+          </header>
+
+          <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
+            <WorkspaceMetric label="今日生成" value={workspaceStats.todayGenerated} />
+            <WorkspaceMetric label="成功率" value={workspaceStats.successRate} />
+            <WorkspaceMetric label="处理中" value={workspaceStats.active} />
+            <WorkspaceMetric label="历史作品" value={workspaceStats.successImages} />
           </div>
 
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <div ref={resultsViewportRef} className="yan-panel h-full min-h-0 overflow-y-auto rounded-lg">
+              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-rose-100/70 bg-white/72 px-4 py-3 backdrop-blur-xl">
+                <div className="min-w-0">
+                  <h2 className="text-base font-bold text-stone-950">生成画面</h2>
+                  <p className="truncate text-sm text-stone-500">
+                    {selectedConversation ? `${selectedConversation.turns.length} 轮创作 · 精选结果` : "选择会话或新建创作"}
+                  </p>
+                </div>
+                <div className="hidden items-center gap-2 text-xs font-medium text-stone-400 sm:flex">
+                  <span>{workspaceStats.queued} 排队</span>
+                  <span>{workspaceStats.running} 运行中</span>
+                </div>
+              </div>
+              <div className="px-3 py-4 sm:px-4">
+                <ImageResults
+                  selectedConversation={selectedConversation}
+                  onOpenLightbox={openLightbox}
+                  onContinueEdit={handleContinueEdit}
+                  formatConversationTime={formatConversationTime}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <aside className="yan-panel min-h-0 overflow-hidden rounded-lg lg:col-span-2 xl:col-span-1">
           <ImageComposer
             mode={imageMode}
             prompt={imagePrompt}
@@ -979,7 +1088,7 @@ function ImagePageContent({ session }: { session: StoredAuthSession }) {
             onReferenceImageChange={handleReferenceImageChange}
             onRemoveReferenceImage={handleRemoveReferenceImage}
           />
-        </div>
+        </aside>
       </section>
 
       <ImageLightbox
@@ -992,7 +1101,7 @@ function ImagePageContent({ session }: { session: StoredAuthSession }) {
 
       {deleteConfirm ? (
         <Dialog open onOpenChange={(open) => (!open ? setDeleteConfirm(null) : null)}>
-          <DialogContent showCloseButton={false} className="rounded-2xl p-6">
+          <DialogContent showCloseButton={false} className="rounded-lg p-6">
             <DialogHeader className="gap-2">
               <DialogTitle>{deleteConfirmTitle}</DialogTitle>
               <DialogDescription className="text-sm leading-6">
@@ -1011,6 +1120,69 @@ function ImagePageContent({ session }: { session: StoredAuthSession }) {
         </Dialog>
       ) : null}
     </>
+  );
+}
+
+function ImageStudioSidebar({
+  conversations,
+  isLoadingHistory,
+  selectedConversationId,
+  availableQuota,
+  onCreateDraft,
+  onClearHistory,
+  onSelectConversation,
+  onDeleteConversation,
+  formatConversationTime,
+}: {
+  conversations: ImageConversation[];
+  isLoadingHistory: boolean;
+  selectedConversationId: string | null;
+  availableQuota: string;
+  onCreateDraft: () => void;
+  onClearHistory: () => void | Promise<void>;
+  onSelectConversation: (id: string) => void;
+  onDeleteConversation: (id: string) => void | Promise<void>;
+  formatConversationTime: (value: string) => string;
+}) {
+  return (
+    <aside className="flex h-full min-h-0 w-full flex-col bg-white/32">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 [scrollbar-color:rgba(244,114,182,.45)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-rose-300/55 [&::-webkit-scrollbar-track]:bg-transparent">
+        <div className="min-h-[320px]">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div>
+              <div className="text-xs font-bold text-stone-500">最近会话</div>
+              <div className="mt-1 text-[11px] text-stone-400">{conversations.length} 条记录</div>
+            </div>
+          </div>
+          <ImageSidebar
+            conversations={conversations}
+            isLoadingHistory={isLoadingHistory}
+            selectedConversationId={selectedConversationId}
+            onCreateDraft={onCreateDraft}
+            onClearHistory={onClearHistory}
+            onSelectConversation={onSelectConversation}
+            onDeleteConversation={onDeleteConversation}
+            formatConversationTime={formatConversationTime}
+          />
+        </div>
+      </div>
+
+      <div className="border-t border-rose-100/70 p-3">
+        <div className="rounded-lg bg-gradient-to-br from-white/80 to-rose-50/80 p-3">
+          <div className="text-sm text-stone-500">剩余额度</div>
+          <div className="mt-1 text-3xl font-bold tracking-tight text-stone-950">{availableQuota}</div>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function WorkspaceMetric({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="yan-panel-strong rounded-lg px-4 py-3">
+      <div className="text-xs font-medium text-stone-500">{label}</div>
+      <div className="mt-2 text-2xl font-bold tracking-tight text-stone-950">{value}</div>
+    </div>
   );
 }
 

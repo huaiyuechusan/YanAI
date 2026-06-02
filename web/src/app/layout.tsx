@@ -23,10 +23,10 @@ export default function RootLayout({
         }}
       >
         <Toaster position="top-center" richColors offset={48} />
-        <main className="min-h-screen bg-[linear-gradient(135deg,_#fff7fb_0%,_#fff1ed_42%,_#ffffff_100%)] px-4 py-2 text-stone-900 sm:px-6 lg:px-8">
-          <div className="mx-auto flex max-w-[1440px] flex-col gap-5">
+        <main className="yan-soft-grid h-screen overflow-hidden px-3 py-3 text-stone-900 sm:px-4 lg:px-5">
+          <div className="yan-app-surface mx-auto flex h-[calc(100dvh-1.5rem)] max-w-[1800px] flex-col overflow-hidden rounded-lg">
             <TopNav />
-            {children}
+            <div className="min-h-0 flex-1 overflow-hidden px-3 py-4 sm:px-5 lg:px-6">{children}</div>
           </div>
         </main>
       </body>

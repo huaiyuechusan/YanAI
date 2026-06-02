@@ -19,7 +19,7 @@ export function BaseUrlCard() {
   const baseUrl = String(config?.base_url || "");
 
   return (
-    <Card className="rounded-2xl border-white/80 bg-white/90 shadow-sm">
+    <Card className="rounded-lg border-white/80 bg-white/80 shadow-sm">
       <CardContent className="space-y-6 p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-center gap-3">

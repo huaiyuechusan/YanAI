@@ -44,38 +44,47 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --radius: 0.5rem;
+  --background: oklch(0.985 0.012 354);
+  --foreground: oklch(0.22 0.032 350);
+  --card: oklch(1 0 0 / 88%);
+  --card-foreground: oklch(0.22 0.032 350);
+  --popover: oklch(1 0 0 / 96%);
+  --popover-foreground: oklch(0.22 0.032 350);
+  --primary: oklch(0.68 0.19 354);
+  --primary-foreground: oklch(0.99 0.005 350);
+  --secondary: oklch(0.96 0.026 350);
+  --secondary-foreground: oklch(0.32 0.045 350);
+  --muted: oklch(0.96 0.018 350);
+  --muted-foreground: oklch(0.52 0.035 350);
+  --accent: oklch(0.95 0.043 342);
+  --accent-foreground: oklch(0.32 0.052 350);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --border: oklch(0.9 0.03 350);
+  --input: oklch(0.9 0.03 350);
+  --ring: oklch(0.76 0.12 350);
+  --chart-1: oklch(0.72 0.16 354);
+  --chart-2: oklch(0.78 0.1 322);
+  --chart-3: oklch(0.64 0.09 26);
+  --chart-4: oklch(0.78 0.12 83);
+  --chart-5: oklch(0.36 0.04 350);
+  --sidebar: oklch(1 0 0 / 80%);
+  --sidebar-foreground: oklch(0.22 0.032 350);
+  --sidebar-primary: oklch(0.68 0.19 354);
+  --sidebar-primary-foreground: oklch(0.99 0.005 350);
+  --sidebar-accent: oklch(0.95 0.043 342);
+  --sidebar-accent-foreground: oklch(0.32 0.052 350);
+  --sidebar-border: oklch(0.9 0.03 350);
+  --sidebar-ring: oklch(0.76 0.12 350);
+  --yan-petal: #f36f9f;
+  --yan-rose: #e7758f;
+  --yan-lavender: #caa4e8;
+  --yan-champagne: #d5aa61;
+  --yan-ink: #2a1822;
+  --yan-panel: rgba(255, 255, 255, 0.72);
+  --yan-panel-strong: rgba(255, 255, 255, 0.9);
+  --yan-border: rgba(113, 59, 83, 0.13);
+  --yan-shadow: 0 24px 70px rgba(84, 38, 62, 0.14);
 }
 
 .dark {
@@ -118,10 +127,55 @@
   }
   body {
     @apply bg-background text-foreground;
+    background:
+      linear-gradient(125deg, rgba(243, 111, 159, 0.16), transparent 34%),
+      linear-gradient(238deg, transparent 38%, rgba(202, 164, 232, 0.14) 73%, transparent 100%),
+      linear-gradient(180deg, #fff8fb 0%, #fff4f8 52%, #fff1f5 100%);
+    letter-spacing: 0;
   }
 }
 
 @layer utilities {
+  .yan-app-surface {
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    background: rgba(255, 255, 255, 0.56);
+    box-shadow: var(--yan-shadow);
+    backdrop-filter: blur(24px);
+  }
+
+  .yan-panel {
+    border: 1px solid rgba(255, 255, 255, 0.78);
+    background: var(--yan-panel);
+    box-shadow: 0 18px 48px rgba(84, 38, 62, 0.08);
+    backdrop-filter: blur(18px);
+  }
+
+  .yan-panel-strong {
+    border: 1px solid rgba(255, 255, 255, 0.82);
+    background: var(--yan-panel-strong);
+    box-shadow: 0 22px 60px rgba(84, 38, 62, 0.1);
+    backdrop-filter: blur(20px);
+  }
+
+  .yan-gradient {
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.24), transparent 42%),
+      linear-gradient(135deg, #2d1d26, #9a5877 52%, #e7758f);
+  }
+
+  .yan-mark-gradient {
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, 0.38), transparent 44%),
+      linear-gradient(135deg, var(--yan-petal), var(--yan-lavender));
+  }
+
+  .yan-soft-grid {
+    background-image:
+      linear-gradient(rgba(42, 24, 34, 0.055) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(42, 24, 34, 0.055) 1px, transparent 1px);
+    background-size: 42px 42px;
+  }
+
   .hide-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
