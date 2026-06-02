@@ -15,6 +15,7 @@ from services.protocol.conversation import (
     stream_text_deltas,
     text_backend,
 )
+from services.protocol.usage import estimate_chat_usage, estimate_text_usage
 from utils.helper import extract_image_from_message_content, extract_response_prompt, has_response_image_generation_tool
 
 
@@ -93,6 +94,8 @@ def image_output_items(prompt: str, data: list[dict[str, Any]], item_id: str | N
                 "status": "completed",
                 "result": b64_json,
                 "revised_prompt": str(item.get("revised_prompt") or prompt).strip() or prompt,
+                "quality": "high",
+                "size": "1024x1024",
             })
     return output
 
@@ -114,7 +117,13 @@ def response_created(response_id: str, model: str, created: int) -> dict[str, An
     }
 
 
-def response_completed(response_id: str, model: str, created: int, output: list[dict[str, Any]]) -> dict[str, Any]:
+def response_completed(
+    response_id: str,
+    model: str,
+    created: int,
+    output: list[dict[str, Any]],
+    usage: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     return {
         "type": "response.completed",
         "response": {
@@ -127,6 +136,7 @@ def response_completed(response_id: str, model: str, created: int, output: list[
             "model": model,
             "output": output,
             "parallel_tool_calls": False,
+            "usage": usage,
         },
     }
 
@@ -147,7 +157,7 @@ def stream_text_response(backend, body: dict[str, Any]) -> Iterator[dict[str, An
     yield {"type": "response.output_text.done", "item_id": item_id, "output_index": 0, "content_index": 0, "text": full_text}
     item = text_output_item(full_text, item_id, "completed")
     yield {"type": "response.output_item.done", "output_index": 0, "item": item}
-    yield response_completed(response_id, model, created, [item])
+    yield response_completed(response_id, model, created, [item], estimate_chat_usage(messages, full_text, model))
 
 
 def stream_image_response(image_outputs: Iterable[ImageOutput], prompt: str, model: str) -> Iterator[dict[str, Any]]:
@@ -162,7 +172,7 @@ def stream_image_response(image_outputs: Iterable[ImageOutput], prompt: str, mod
                 yield {"type": "response.output_text.delta", "item_id": item["id"], "output_index": 0, "content_index": 0, "delta": text}
                 yield {"type": "response.output_text.done", "item_id": item["id"], "output_index": 0, "content_index": 0, "text": text}
                 yield {"type": "response.output_item.done", "output_index": 0, "item": item}
-                yield response_completed(response_id, model, created, [item])
+                yield response_completed(response_id, model, created, [item], estimate_text_usage(prompt, text, model))
                 return
             if output.kind != "result":
                 continue
@@ -170,7 +180,7 @@ def stream_image_response(image_outputs: Iterable[ImageOutput], prompt: str, mod
             if items:
                 item = items[0]
                 yield {"type": "response.output_item.done", "output_index": 0, "item": item}
-                yield response_completed(response_id, model, created, [item])
+                yield response_completed(response_id, model, created, [item], estimate_text_usage(prompt, "", model))
                 return
     finally:
         close = getattr(image_outputs, "close", None)

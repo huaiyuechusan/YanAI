@@ -3,6 +3,7 @@ from __future__ import annotations
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
@@ -12,8 +13,10 @@ from services.channel_service import channel_service
 from services.config import config
 from services.image_service import list_images
 from services.log_service import audit_service
+from services.model_service import model_service
 from services import linuxdo_oauth_service
 from services.registration_security import send_registration_verification_code, validate_registration_email
+from utils.model_catalog import DEFAULT_INTERNAL_MODELS
 
 
 class RegisterRequest(BaseModel):
@@ -83,7 +86,7 @@ class ChannelRequest(BaseModel):
     name: str = ""
     base_url: str = ""
     api_key: str = ""
-    models: list[str] | str = Field(default_factory=lambda: ["gpt-image-1", "gpt-image-2"])
+    models: list[str] | str = Field(default_factory=lambda: list(DEFAULT_INTERNAL_MODELS))
     weight: int = 1
     priority: int = 0
     timeout: int = 60
@@ -99,6 +102,19 @@ class ChannelUpdateRequest(BaseModel):
     priority: int | None = None
     timeout: int | None = None
     enabled: bool | None = None
+
+
+class ModelPricingRequest(BaseModel):
+    model: str = ""
+    enabled: bool | None = None
+    billing_mode: str | None = None
+    currency: str | None = None
+    input_price_per_million: float | None = None
+    output_price_per_million: float | None = None
+    model_ratio: float | None = None
+    completion_ratio: float | None = None
+    model_price: float | None = None
+    note: str | None = None
 
 
 def create_router() -> APIRouter:
@@ -404,6 +420,30 @@ def create_router() -> APIRouter:
         require_admin(authorization)
         return {"items": channel_service.list_channels()}
 
+    @router.get("/api/admin/models")
+    async def admin_list_models(authorization: str | None = Header(default=None)):
+        require_admin(authorization)
+        return model_service.list_catalog()
+
+    @router.post("/api/admin/models/pricing")
+    async def admin_update_model_pricing(body: ModelPricingRequest, authorization: str | None = Header(default=None)):
+        admin = require_admin(authorization)
+        try:
+            item = model_service.update_pricing(
+                body.model,
+                body.model_dump(exclude={"model"}, exclude_none=True, mode="python"),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail={"error": str(exc)}) from exc
+        audit_service.add(
+            actor=admin,
+            action="models.pricing.update",
+            resource="model",
+            target_id=str(item.get("model") or ""),
+            detail={"pricing": item},
+        )
+        return {"item": item, **model_service.list_catalog()}
+
     @router.post("/api/admin/channels")
     async def admin_create_channel(body: ChannelRequest, authorization: str | None = Header(default=None)):
         require_admin(authorization)
@@ -423,6 +463,24 @@ def create_router() -> APIRouter:
         if item is None:
             raise HTTPException(status_code=404, detail={"error": "channel not found"})
         return {"item": item, "items": channel_service.list_channels()}
+
+    @router.post("/api/admin/channels/{channel_id}/models/refresh")
+    async def admin_refresh_channel_models(channel_id: str, authorization: str | None = Header(default=None)):
+        admin = require_admin(authorization)
+        try:
+            result = await run_in_threadpool(model_service.refresh_channel_models, channel_id)
+        except (RuntimeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail={"error": str(exc)}) from exc
+        if result is None:
+            raise HTTPException(status_code=404, detail={"error": "channel not found"})
+        audit_service.add(
+            actor=admin,
+            action="channels.models.refresh",
+            resource="channel",
+            target_id=channel_id,
+            detail={"models": result.get("models"), "channel": result.get("channel")},
+        )
+        return {**result, **model_service.list_catalog()}
 
     @router.delete("/api/admin/channels/{channel_id}")
     async def admin_delete_channel(channel_id: str, authorization: str | None = Header(default=None)):

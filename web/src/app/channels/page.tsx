@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { createChannel, deleteChannel, fetchChannels, updateChannel, type Channel } from "@/lib/api";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 
+const DEFAULT_CHANNEL_MODELS = "gpt-5,gpt-5-1,gpt-5-2,gpt-5-3,gpt-5-3-mini,gpt-5-5,gpt-5-mini,gpt-image-2,codex-gpt-image-2,auto";
+
 function ChannelsContent() {
   const [items, setItems] = useState<Channel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -18,7 +20,7 @@ function ChannelsContent() {
     name: "",
     base_url: "",
     api_key: "",
-    models: "gpt-image-1,gpt-image-2",
+    models: DEFAULT_CHANNEL_MODELS,
     weight: "1",
     priority: "0",
     timeout: "60",
@@ -53,7 +55,7 @@ function ChannelsContent() {
         enabled: true,
       });
       setItems(data.items);
-      setForm({ name: "", base_url: "", api_key: "", models: "gpt-image-1,gpt-image-2", weight: "1", priority: "0", timeout: "60" });
+      setForm({ name: "", base_url: "", api_key: "", models: DEFAULT_CHANNEL_MODELS, weight: "1", priority: "0", timeout: "60" });
       toast.success("渠道已创建");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "创建渠道失败");

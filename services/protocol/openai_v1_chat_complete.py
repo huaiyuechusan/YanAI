@@ -11,14 +11,13 @@ from services.protocol.conversation import (
     ImageOutput,
     collect_image_outputs,
     collect_text,
-    count_message_tokens,
-    count_text_tokens,
     encode_images,
     normalize_messages,
     stream_image_outputs_with_pool,
     stream_text_deltas,
     text_backend,
 )
+from services.protocol.usage import estimate_chat_usage, estimate_text_usage
 from utils.helper import build_chat_image_markdown_content, extract_chat_image, extract_chat_prompt, is_image_chat_request, parse_image_count
 
 
@@ -37,9 +36,9 @@ def completion_response(
     content: str,
     created: int | None = None,
     messages: list[dict[str, Any]] | None = None,
+    usage: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    prompt_tokens = count_message_tokens(messages, model) if messages else 0
-    completion_tokens = count_text_tokens(content, model) if messages else 0
+    final_usage = usage or estimate_chat_usage(messages or [], content, model)
     return {
         "id": f"chatcmpl-{uuid.uuid4().hex}",
         "object": "chat.completion",
@@ -50,11 +49,7 @@ def completion_response(
             "message": {"role": "assistant", "content": content},
             "finish_reason": "stop",
         }],
-        "usage": {
-            "prompt_tokens": prompt_tokens,
-            "completion_tokens": completion_tokens,
-            "total_tokens": prompt_tokens + completion_tokens,
-        },
+        "usage": final_usage,
     }
 
 
@@ -132,7 +127,12 @@ def image_chat_response(body: dict[str, Any]) -> dict[str, Any]:
         images=encode_images(images) or None,
         request_id=request_id,
     )))
-    return completion_response(model, image_result_content(result), int(result.get("created") or 0) or None)
+    return completion_response(
+        model,
+        image_result_content(result),
+        int(result.get("created") or 0) or None,
+        usage=estimate_text_usage(prompt, "", model),
+    )
 
 
 def image_chat_events(body: dict[str, Any]) -> Iterator[dict[str, Any]]:

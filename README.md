@@ -1,7 +1,7 @@
 <h1 align="center">颜AI</h1>
 
 
-<p align="center">颜AI 是一个围绕 ChatGPT 图片能力封装的自托管图片创作与管理系统，提供 OpenAI 兼容图片 API、在线画图工作台、图生图预设、账号池轮询、个人用户额度、渠道管理、图片归档、日志与 Docker 部署能力。</p>
+<p align="center">颜AI 是一个围绕 ChatGPT 图片能力封装的自托管图片创作与管理系统，提供 OpenAI 兼容图片 API、在线画图工作台、图生图预设、账号池轮询、个人用户额度、渠道管理、模型管理、计费标准配置、图片归档、日志与 Docker 部署能力。</p>
 
 > [!WARNING]
 > 免责声明：
@@ -127,7 +127,7 @@ python scripts/migrate_storage.py --from json --to postgres --verify-only
 - 兼容 `POST /v1/images/generations` 图片生成接口
 - 兼容 `POST /v1/images/edits` 图片编辑接口
 - 管理员密钥可调用 `POST /v1/chat/completions`、`POST /v1/responses` 与 `POST /v1/messages`
-- `GET /v1/models` 会返回上游模型列表，并补充内置图片模型 `gpt-image-2`、`codex-gpt-image-2`
+- `GET /v1/models` 会返回上游模型列表，并补充内置默认模型 `gpt-5`、`gpt-5-1`、`gpt-5-2`、`gpt-5-3`、`gpt-5-3-mini`、`gpt-5-5`、`gpt-5-mini`、`gpt-image-2`、`codex-gpt-image-2`、`auto`
 - 图片接口支持 `n=1-4`，前端工作台会按张数拆分任务执行
 - 支持内置账号池与 OpenAI 图片兼容外部渠道，按模型、权重、优先级进行路由
 - 支持 Codex 中的画图接口逆向，仅 `Plus` / `Team` / `Pro` 订阅可用，模型别名为 `codex-gpt-image-2`，用于和官网画图区分
@@ -156,7 +156,15 @@ python scripts/migrate_storage.py --from json --to postgres --verify-only
 - 管理员可创建个人用户、调整额度、禁用账号、重置密码
 - 支持个人用户注册、登录、兑换码领取额度，以及个人图片记录查看
 - 支持 OpenAI 图片兼容渠道管理，可设置 Base URL、API Key、模型、权重、优先级和超时时间
+- 支持模型管理，可按渠道汇总模型、从渠道 `/v1/models` 获取模型列表，并为每个模型配置计费标准
 - 支持系统日志查看、图片访问地址配置、自动清理天数、账号刷新间隔和模型映射配置
+
+### 模型管理与计费标准
+
+- 管理员可在「模型管理」页面查看所有渠道模型；内置账号池默认提供与 New API 接入常用配置一致的 10 个模型，外部渠道则读取渠道自身 `models` 配置。
+- 每个 OpenAI 兼容外部渠道都可以通过「获取」按钮请求该渠道的 `/v1/models`，成功后自动写回渠道模型列表。
+- 模型计费配置保存在系统配置 `model_pricing` 中，兼容 JSON、SQLite、PostgreSQL 等现有存储后端，不需要额外迁移表结构。
+- 计费标准支持按 Token 和按次两种模式；可配置输入价 / 1M tokens、输出价 / 1M tokens、`model_ratio`、`completion_ratio`、`model_price`、币种和启停状态，方便对接 New API 风格的倍率或固定价格计费。
 
 ### 多用户稳定并发改造
 
@@ -235,7 +243,7 @@ Authorization: Bearer <auth-key>
 <summary><code>GET /v1/models</code></summary>
 <br>
 
-返回上游模型列表，并补充当前内置图片模型。
+返回上游模型列表，并补充当前内置默认模型。
 
 ```bash
 curl http://localhost:8000/v1/models \
@@ -246,10 +254,10 @@ curl http://localhost:8000/v1/models \
 <summary>说明</summary>
 <br>
 
-| 字段   | 说明                                                       |
-|:-----|:---------------------------------------------------------|
-| 返回模型 | 上游模型列表，并补充 `gpt-image-2`、`codex-gpt-image-2` 图片模型 |
-| 接入场景 | 可接入 Cherry Studio、New API 等上游或客户端                        |
+| 字段   | 说明                                                                                                                                 |
+|:-----|:-----------------------------------------------------------------------------------------------------------------------------------|
+| 返回模型 | 上游模型列表，并补充 `gpt-5`、`gpt-5-1`、`gpt-5-2`、`gpt-5-3`、`gpt-5-3-mini`、`gpt-5-5`、`gpt-5-mini`、`gpt-image-2`、`codex-gpt-image-2`、`auto` |
+| 接入场景 | 可接入 Cherry Studio、New API 等上游或客户端                                                                                                  |
 
 <br>
 </details>

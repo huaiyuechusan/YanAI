@@ -14,6 +14,7 @@ from services.config import config
 from services.repositories.base import RepositoryProvider
 from services.repositories.storage_adapter import RepositoryStorageAdapter
 from services.storage.base import StorageBackend
+from utils.model_catalog import DEFAULT_INTERNAL_MODELS
 
 
 def _now_iso() -> str:
@@ -123,30 +124,41 @@ class ChannelService:
             "updated_at": channel.get("updated_at"),
         }
 
+    @staticmethod
+    def _internal_channel() -> dict[str, object]:
+        return {
+            "id": "internal_pool",
+            "name": "内置账号池",
+            "type": "internal_pool",
+            "base_url": "",
+            "models": list(DEFAULT_INTERNAL_MODELS),
+            "weight": 1,
+            "priority": -1000,
+            "timeout": 0,
+            "enabled": True,
+            "has_api_key": False,
+            "created_at": None,
+            "updated_at": None,
+        }
+
     def list_channels(self, include_internal: bool = True) -> list[dict[str, object]]:
         with self._lock:
             channels = self._current_channels()
             items = [self._public(channel) for channel in channels]
         items.sort(key=lambda item: (int(item.get("priority") or 0), int(item.get("weight") or 0)), reverse=True)
         if include_internal:
-            return [
-                {
-                    "id": "internal_pool",
-                    "name": "内置账号池",
-                    "type": "internal_pool",
-                    "base_url": "",
-                    "models": ["gpt-image-2", "codex-gpt-image-2"],
-                    "weight": 1,
-                    "priority": -1000,
-                    "timeout": 0,
-                    "enabled": True,
-                    "has_api_key": False,
-                    "created_at": None,
-                    "updated_at": None,
-                },
-                *items,
-            ]
+            return [self._internal_channel(), *items]
         return items
+
+    def get_channel(self, channel_id: str, *, include_internal: bool = True) -> dict[str, object] | None:
+        normalized_id = _clean(channel_id)
+        if include_internal and normalized_id == "internal_pool":
+            return self._internal_channel()
+        with self._lock:
+            for channel in self._current_channels():
+                if channel.get("id") == normalized_id:
+                    return self._public(channel)
+        return None
 
     def create_channel(self, data: dict[str, object]) -> dict[str, object]:
         channel = self._normalize({**data, "id": uuid.uuid4().hex[:12], "created_at": _now_iso(), "updated_at": _now_iso()})
@@ -205,6 +217,80 @@ class ChannelService:
             self._save()
             self._invalidate_cache()
             return True
+
+    @staticmethod
+    def extract_model_ids(payload: object) -> list[str]:
+        if isinstance(payload, dict):
+            candidates = payload.get("data")
+            if not isinstance(candidates, list):
+                candidates = payload.get("models")
+            if not isinstance(candidates, list):
+                candidates = payload.get("items")
+        else:
+            candidates = payload
+        if not isinstance(candidates, list):
+            return []
+
+        seen: set[str] = set()
+        models: list[str] = []
+        for item in candidates:
+            if isinstance(item, str):
+                model = _clean(item)
+            elif isinstance(item, dict):
+                model = _clean(item.get("id") or item.get("model") or item.get("name") or item.get("slug"))
+            else:
+                model = ""
+            if not model or model in seen:
+                continue
+            seen.add(model)
+            models.append(model)
+        return models
+
+    def fetch_channel_models(self, channel_id: str) -> list[str] | None:
+        normalized_id = _clean(channel_id)
+        if normalized_id == "internal_pool":
+            try:
+                from services.protocol.openai_v1_models import list_models
+
+                models = self.extract_model_ids(list_models())
+            except Exception:
+                models = []
+            merged = self.extract_model_ids([*models, *DEFAULT_INTERNAL_MODELS])
+            return merged or list(DEFAULT_INTERNAL_MODELS)
+        with self._lock:
+            channel = next((dict(item) for item in self._current_channels() if item.get("id") == normalized_id), None)
+        if channel is None:
+            return None
+
+        base_url = _clean(channel.get("base_url")).rstrip("/")
+        if not base_url:
+            raise ValueError("channel base_url is required")
+        response = self._session(channel).get(
+            f"{base_url}/v1/models",
+            timeout=int(channel.get("timeout") or 60),
+        )
+        if not response.ok:
+            raise RuntimeError(f"HTTP {response.status_code}: {response.text[:300]}")
+        try:
+            payload = response.json()
+        except Exception as exc:
+            raise RuntimeError("channel model response is invalid") from exc
+        models = self.extract_model_ids(payload)
+        if not models:
+            raise RuntimeError("channel model response contains no models")
+        return models
+
+    def refresh_channel_models(self, channel_id: str) -> dict[str, object] | None:
+        normalized_id = _clean(channel_id)
+        models = self.fetch_channel_models(normalized_id)
+        if models is None:
+            return None
+        if normalized_id == "internal_pool":
+            return {"channel": self._internal_channel(), "models": models}
+        item = self.update_channel(normalized_id, {"models": models})
+        if item is None:
+            return None
+        return {"channel": item, "models": models}
 
     def _enabled_external_channels(self, model: str | None = None) -> list[dict[str, object]]:
         with self._lock:

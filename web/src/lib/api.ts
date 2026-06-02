@@ -716,6 +716,50 @@ export type Channel = {
   updated_at?: string | null;
 };
 
+export type ModelPricing = {
+  model: string;
+  enabled: boolean;
+  billing_mode: "tokens" | "fixed";
+  currency: string;
+  input_price_per_million: number;
+  output_price_per_million: number;
+  model_ratio: number;
+  completion_ratio: number;
+  model_price: number;
+  note: string;
+};
+
+export type ModelChannelSummary = {
+  id: string;
+  name: string;
+  type: "internal_pool" | "openai_image" | string;
+  enabled: boolean;
+  base_url?: string;
+  models?: string[];
+  model_count?: number;
+};
+
+export type ManagedModel = {
+  id: string;
+  model: string;
+  source: "channel" | "custom";
+  channel_count: number;
+  channels: ModelChannelSummary[];
+  enabled: boolean;
+  configured: boolean;
+  pricing: ModelPricing;
+};
+
+export type ModelCatalogResponse = {
+  items: ManagedModel[];
+  channels: ModelChannelSummary[];
+  pricing: Record<string, ModelPricing>;
+};
+
+export type ModelPricingPayload = Partial<Omit<ModelPricing, "model">> & {
+  model: string;
+};
+
 export async function fetchChannels() {
   return httpRequest<{ items: Channel[] }>("/api/admin/channels");
 }
@@ -759,6 +803,24 @@ export async function deleteChannel(channelId: string) {
   return httpRequest<{ items: Channel[] }>(`/api/admin/channels/${channelId}`, {
     method: "DELETE",
   });
+}
+
+export async function fetchModelCatalog() {
+  return httpRequest<ModelCatalogResponse>("/api/admin/models");
+}
+
+export async function updateModelPricing(payload: ModelPricingPayload) {
+  return httpRequest<ModelCatalogResponse & { item: ModelPricing }>("/api/admin/models/pricing", {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export async function refreshChannelModels(channelId: string) {
+  return httpRequest<ModelCatalogResponse & { channel: Channel; models: string[] }>(
+    `/api/admin/channels/${channelId}/models/refresh`,
+    { method: "POST" },
+  );
 }
 
 export async function fetchRegisterConfig() {

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  BadgeDollarSign,
   Boxes,
   FileText,
   Gift,
@@ -38,6 +39,7 @@ const adminNavItems = [
   { href: "/prompt-manager", label: "提示词管理", icon: PenLine },
   { href: "/image-manager", label: "图片管理", icon: Images },
   { href: "/channels", label: "渠道管理", icon: Waypoints },
+  { href: "/models", label: "模型管理", icon: BadgeDollarSign },
   { href: "/redeem-codes", label: "兑换码", icon: Gift },
   { href: "/logs", label: "日志", icon: FileText },
   { href: "/settings", label: "设置", icon: Settings },
