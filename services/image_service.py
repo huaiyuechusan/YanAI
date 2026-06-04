@@ -118,6 +118,67 @@ def _local_image_path_from_url(url: str) -> Path | None:
     return candidate
 
 
+def _record_has_available_image(record: dict[str, object]) -> bool:
+    url = _clean(record.get("url"))
+    if not url:
+        return False
+    path = _local_image_path_from_url(url)
+    if path is None:
+        return True
+    try:
+        return path.is_file() and path.stat().st_size > 0
+    except OSError:
+        return False
+
+
+def _record_matches_filters(
+    record: dict[str, object],
+    *,
+    start_date: str,
+    end_date: str,
+    owner_user_id: str,
+    channel: str,
+    request_id: str,
+) -> bool:
+    created_at = _clean(record.get("created_at"))
+    day = created_at[:10]
+    if owner_user_id and _clean(record.get("owner_user_id")) != owner_user_id:
+        return False
+    if channel and _clean(record.get("channel")) != channel:
+        return False
+    if request_id and _clean(record.get("request_id")) != request_id:
+        return False
+    if start_date and day < start_date:
+        return False
+    if end_date and day > end_date:
+        return False
+    return True
+
+
+def _paginated_image_response(
+    items: list[dict[str, object]],
+    *,
+    page: int,
+    page_size: int,
+) -> dict[str, object]:
+    items.sort(key=lambda item: str(item["created_at"]), reverse=True)
+    total = len(items)
+    page_count = max(1, (total + page_size - 1) // page_size)
+    safe_page = min(page, page_count)
+    start = (safe_page - 1) * page_size
+    page_items = items[start:start + page_size]
+    return {
+        "items": page_items,
+        "groups": _group_items(page_items),
+        "pagination": {
+            "page": safe_page,
+            "page_size": page_size,
+            "total": total,
+            "page_count": page_count,
+        },
+    }
+
+
 def _prune_empty_image_dirs(path: Path) -> None:
     root = config.images_dir.resolve()
     current = path.resolve()
@@ -152,7 +213,10 @@ def _list_files(base_url: str, start_date: str = "", end_date: str = "", seen_ur
             continue
         rel = path.relative_to(root).as_posix()
         parts = rel.split("/")
-        day = "-".join(parts[:3]) if len(parts) >= 4 else datetime.fromtimestamp(path.stat().st_mtime).strftime("%Y-%m-%d")
+        stat = path.stat()
+        if stat.st_size <= 0:
+            continue
+        day = "-".join(parts[:3]) if len(parts) >= 4 else datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d")
         if start_date and day < start_date:
             continue
         if end_date and day > end_date:
@@ -163,9 +227,9 @@ def _list_files(base_url: str, start_date: str = "", end_date: str = "", seen_ur
         items.append({
             "name": path.name,
             "date": day,
-            "size": path.stat().st_size,
+            "size": stat.st_size,
             "url": url,
-            "created_at": datetime.fromtimestamp(path.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
+            "created_at": datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
         })
     items.sort(key=lambda item: str(item["created_at"]), reverse=True)
     return items
@@ -183,28 +247,11 @@ def list_images(
 ) -> dict[str, object]:
     storage = _image_record_source()
     normalized_page, normalized_page_size = _normalize_page(page, page_size)
-    if isinstance(storage, ImageRecordRepository):
-        try:
-            result = storage.query(
-                start_date=start_date.strip(),
-                end_date=end_date.strip(),
-                owner_user_id=owner_user_id.strip(),
-                channel=channel.strip(),
-                request_id=request_id.strip(),
-                page=normalized_page,
-                page_size=normalized_page_size,
-            )
-            items = [_record_to_item(record, base_url) for record in result.get("items", []) if isinstance(record, dict)]
-            pagination = {
-                "page": int(result.get("page") or normalized_page),
-                "page_size": int(result.get("page_size") or normalized_page_size),
-                "total": int(result.get("total") or 0),
-                "page_count": int(result.get("page_count") or 1),
-            }
-            return {"items": items, "groups": _group_items(items), "pagination": pagination}
-        except Exception:
-            pass
-
+    normalized_start_date = start_date.strip()
+    normalized_end_date = end_date.strip()
+    normalized_owner_user_id = owner_user_id.strip()
+    normalized_channel = channel.strip()
+    normalized_request_id = request_id.strip()
     try:
         if isinstance(storage, ImageRecordRepository):
             records = storage.list()
@@ -216,38 +263,22 @@ def list_images(
     for record in records:
         if not isinstance(record, dict):
             continue
-        created_at = _clean(record.get("created_at"))
-        day = created_at[:10]
-        if owner_user_id and _clean(record.get("owner_user_id")) != owner_user_id:
+        if not _record_has_available_image(record):
             continue
-        if channel and _clean(record.get("channel")) != channel:
-            continue
-        if request_id and _clean(record.get("request_id")) != request_id:
-            continue
-        if start_date and day < start_date:
-            continue
-        if end_date and day > end_date:
+        if not _record_matches_filters(
+            record,
+            start_date=normalized_start_date,
+            end_date=normalized_end_date,
+            owner_user_id=normalized_owner_user_id,
+            channel=normalized_channel,
+            request_id=normalized_request_id,
+        ):
             continue
         items.append(_record_to_item(record, base_url))
     seen_urls = {str(item.get("url") or "") for item in items}
-    if not owner_user_id:
-        items.extend(_list_files(base_url, start_date, end_date, seen_urls))
-    items.sort(key=lambda item: str(item["created_at"]), reverse=True)
-    total = len(items)
-    page_count = max(1, (total + normalized_page_size - 1) // normalized_page_size)
-    safe_page = min(normalized_page, page_count)
-    start = (safe_page - 1) * normalized_page_size
-    page_items = items[start:start + normalized_page_size]
-    return {
-        "items": page_items,
-        "groups": _group_items(page_items),
-        "pagination": {
-            "page": safe_page,
-            "page_size": normalized_page_size,
-            "total": total,
-            "page_count": page_count,
-        },
-    }
+    if not normalized_owner_user_id:
+        items.extend(_list_files(base_url, normalized_start_date, normalized_end_date, seen_urls))
+    return _paginated_image_response(items, page=normalized_page, page_size=normalized_page_size)
 
 
 def delete_images(

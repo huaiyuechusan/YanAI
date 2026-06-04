@@ -72,18 +72,23 @@ class ImageServiceTests(unittest.TestCase):
         self.assertEqual(result["items"][0]["image_size"], "4:3")
 
     def test_list_images_returns_paginated_payload(self) -> None:
-        records = [
-            {
-                "id": f"image-{index}",
-                "url": f"http://127.0.0.1:8000/images/2026/05/{index:02d}/sample.png",
-                "created_at": f"2026-05-{index:02d} 12:00:00",
-            }
-            for index in range(1, 13)
-        ]
         with tempfile.TemporaryDirectory() as tmp_dir:
+            images_dir = Path(tmp_dir) / "images"
+            records = []
+            for index in range(1, 13):
+                image_path = images_dir / "2026" / "05" / f"{index:02d}" / "sample.png"
+                image_path.parent.mkdir(parents=True)
+                image_path.write_bytes(b"image-bytes")
+                records.append(
+                    {
+                        "id": f"image-{index}",
+                        "url": f"http://127.0.0.1:8000/images/2026/05/{index:02d}/sample.png",
+                        "created_at": f"2026-05-{index:02d} 12:00:00",
+                    }
+                )
             fake_storage = SimpleNamespace(load_image_records=lambda: records)
             fake_config = SimpleNamespace(
-                images_dir=Path(tmp_dir) / "images",
+                images_dir=images_dir,
                 cleanup_old_images=lambda: 0,
                 get_storage_backend=lambda: fake_storage,
             )
@@ -95,6 +100,59 @@ class ImageServiceTests(unittest.TestCase):
         self.assertEqual(result["pagination"]["total"], 12)
         self.assertEqual(result["pagination"]["page"], 2)
         self.assertEqual(result["pagination"]["page_count"], 3)
+
+    def test_list_images_skips_missing_local_recorded_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            images_dir = Path(tmp_dir) / "images"
+            image_path = images_dir / "2026" / "05" / "25" / "keep.png"
+            image_path.parent.mkdir(parents=True)
+            image_path.write_bytes(b"image-bytes")
+            records = [
+                {
+                    "id": "missing-image",
+                    "url": "http://127.0.0.1:8000/images/2026/05/25/missing.png",
+                    "created_at": "2026-05-25 13:00:00",
+                },
+                {
+                    "id": "existing-image",
+                    "url": "http://127.0.0.1:8000/images/2026/05/25/keep.png",
+                    "created_at": "2026-05-25 12:00:00",
+                },
+            ]
+            fake_storage = SimpleNamespace(load_image_records=lambda: records)
+            fake_config = SimpleNamespace(
+                images_dir=images_dir,
+                cleanup_old_images=lambda: 0,
+                get_storage_backend=lambda: fake_storage,
+            )
+
+            with mock.patch.object(image_service, "config", fake_config):
+                result = image_service.list_images("http://127.0.0.1:8000")
+
+        self.assertEqual([item["id"] for item in result["items"]], ["existing-image"])
+        self.assertEqual(result["pagination"]["total"], 1)
+
+    def test_list_images_keeps_external_records_without_local_path(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            records = [
+                {
+                    "id": "external-image",
+                    "url": "https://example.com/assets/image.png",
+                    "created_at": "2026-05-25 12:00:00",
+                }
+            ]
+            fake_storage = SimpleNamespace(load_image_records=lambda: records)
+            fake_config = SimpleNamespace(
+                images_dir=Path(tmp_dir) / "images",
+                cleanup_old_images=lambda: 0,
+                get_storage_backend=lambda: fake_storage,
+            )
+
+            with mock.patch.object(image_service, "config", fake_config):
+                result = image_service.list_images("http://127.0.0.1:8000")
+
+        self.assertEqual([item["id"] for item in result["items"]], ["external-image"])
+        self.assertEqual(result["pagination"]["total"], 1)
 
     def test_delete_images_removes_record_and_local_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

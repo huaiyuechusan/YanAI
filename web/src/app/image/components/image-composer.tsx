@@ -803,6 +803,11 @@ export function ImageComposer({
     window.requestAnimationFrame(() => textareaRef.current?.focus());
   };
 
+  const handleClearPrompt = () => {
+    onPromptChange("");
+    window.requestAnimationFrame(() => textareaRef.current?.focus());
+  };
+
   useEffect(() => {
     const controller = new AbortController();
     const loadBananaPrompts = async () => {
@@ -995,7 +1000,16 @@ export function ImageComposer({
               );
             })}
           </div>
-          <div className="flex justify-end">
+          <div className="flex flex-wrap justify-end gap-2">
+            <button
+              type="button"
+              onClick={handleClearPrompt}
+              disabled={!prompt}
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-rose-100 bg-white/75 px-3 text-sm font-medium text-stone-700 transition hover:border-rose-200 hover:bg-white disabled:cursor-not-allowed disabled:border-stone-100 disabled:bg-stone-50 disabled:text-stone-300"
+            >
+              <X className="size-4" />
+              清空提示词
+            </button>
             <button
               type="button"
               onClick={() => setIsPromptLibraryOpen(true)}

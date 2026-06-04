@@ -224,6 +224,7 @@ class SystemLogRepository(ABC):
         start_date: str = "",
         end_date: str = "",
         request_id: str = "",
+        status: str = "",
         page: int = 1,
         page_size: int = 200,
     ) -> dict[str, Any]:

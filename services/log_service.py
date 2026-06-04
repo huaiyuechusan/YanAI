@@ -73,6 +73,7 @@ class LogService:
         start_date: str = "",
         end_date: str = "",
         request_id: str = "",
+        status: str = "",
         page: int = 1,
         page_size: int = 200,
     ) -> dict[str, Any]:
@@ -84,12 +85,13 @@ class LogService:
                     start_date=start_date,
                     end_date=end_date,
                     request_id=request_id,
+                    status=status,
                     page=page,
                     page_size=page_size,
                 )
             except Exception:
                 pass
-        items = self._list_file(type=type, start_date=start_date, end_date=end_date, request_id=request_id)
+        items = self._list_file(type=type, start_date=start_date, end_date=end_date, request_id=request_id, status=status)
         normalized_page = max(1, int(page or 1))
         normalized_page_size = max(1, min(200, int(page_size or 200)))
         total = len(items)
@@ -111,12 +113,14 @@ class LogService:
         end_date: str = "",
         limit: int = 200,
         request_id: str = "",
+        status: str = "",
     ) -> list[dict[str, Any]]:
         return self.query(
             type=type,
             start_date=start_date,
             end_date=end_date,
             request_id=request_id,
+            status=status,
             page=1,
             page_size=limit,
         )["items"]
@@ -127,10 +131,12 @@ class LogService:
         start_date: str = "",
         end_date: str = "",
         request_id: str = "",
+        status: str = "",
     ) -> list[dict[str, Any]]:
         if not self.path.exists():
             return []
         items: list[dict[str, Any]] = []
+        normalized_status = str(status or "").strip()
         for line in reversed(self.path.read_text(encoding="utf-8").splitlines()):
             try:
                 item = json.loads(line)
@@ -143,6 +149,9 @@ class LogService:
             item_detail = item.get("detail")
             detail_request_id = item_detail.get("request_id") if isinstance(item_detail, dict) else ""
             if request_id and str(item.get("request_id") or detail_request_id or "") != request_id:
+                continue
+            detail_status = item_detail.get("status") if isinstance(item_detail, dict) else ""
+            if normalized_status and str(item.get("status") or detail_status or "").strip() != normalized_status:
                 continue
             if start_date and day < start_date:
                 continue

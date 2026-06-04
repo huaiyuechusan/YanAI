@@ -27,8 +27,9 @@ class ObservabilityTest(unittest.TestCase):
 
             with mock.patch("services.config.config", fake_config), request_id_context("req-log"):
                 for index in range(3):
-                    service.add(LOG_TYPE_CALL, f"call-{index}", {"status": "success", "index": index})
+                    service.add(LOG_TYPE_CALL, f"call-{index}", {"status": "failed" if index == 1 else "success", "index": index})
                 page = service.query(type=LOG_TYPE_CALL, request_id="req-log", page=1, page_size=2)
+                failed_page = service.query(type=LOG_TYPE_CALL, request_id="req-log", status="failed")
 
             self.assertEqual(storage.repository_provider.system_logs.count(), 3)
             self.assertFalse(log_path.exists())
@@ -36,7 +37,23 @@ class ObservabilityTest(unittest.TestCase):
             self.assertEqual(page["page_count"], 2)
             self.assertEqual(len(page["items"]), 2)
             self.assertEqual(page["items"][0]["detail"]["request_id"], "req-log")
+            self.assertEqual(failed_page["total"], 1)
+            self.assertEqual(failed_page["items"][0]["detail"]["status"], "failed")
             storage.close()
+
+    def test_file_system_logs_can_filter_by_status(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            log_path = Path(tmp_dir) / "logs.jsonl"
+            service = LogService(log_path)
+            fake_config = SimpleNamespace(get_repository_provider=lambda: None)
+
+            with mock.patch("services.config.config", fake_config):
+                service.add(LOG_TYPE_CALL, "call-success", {"status": "success"})
+                service.add(LOG_TYPE_CALL, "call-failed", {"status": "failed"})
+                result = service.query(type=LOG_TYPE_CALL, status="failed")
+
+            self.assertEqual(result["total"], 1)
+            self.assertEqual(result["items"][0]["summary"], "call-failed")
 
     def test_audit_logs_have_dedicated_repository(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

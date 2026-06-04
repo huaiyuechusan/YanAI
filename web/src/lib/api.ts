@@ -550,6 +550,7 @@ export async function fetchSystemLogs(filters: {
   start_date?: string;
   end_date?: string;
   request_id?: string;
+  status?: string;
   page?: number;
   page_size?: number;
 }) {
@@ -558,6 +559,7 @@ export async function fetchSystemLogs(filters: {
   if (filters.start_date) params.set("start_date", filters.start_date);
   if (filters.end_date) params.set("end_date", filters.end_date);
   if (filters.request_id) params.set("request_id", filters.request_id);
+  if (filters.status) params.set("status", filters.status);
   if (filters.page) params.set("page", String(filters.page));
   if (filters.page_size) params.set("page_size", String(filters.page_size));
   return httpRequest<LogListResponse>(`/api/logs${params.toString() ? `?${params.toString()}` : ""}`);

@@ -1400,10 +1400,12 @@ class SQLAlchemySystemLogRepository(SystemLogRepository):
         start_date: str = "",
         end_date: str = "",
         request_id: str = "",
+        status: str = "",
         page: int = 1,
         page_size: int = 200,
     ) -> dict[str, Any]:
         normalized_page, normalized_page_size = _normalize_page(page, page_size)
+        normalized_status = _clean(status)
         conditions = self._filter_conditions(
             type=type,
             start_date=start_date,
@@ -1411,6 +1413,28 @@ class SQLAlchemySystemLogRepository(SystemLogRepository):
             request_id=request_id,
         )
         with self._session_factory() as session:
+            if normalized_status:
+                rows = session.execute(
+                    select(SystemLogRow)
+                    .where(*conditions)
+                    .order_by(SystemLogRow.time.desc(), SystemLogRow.id.desc())
+                ).scalars()
+                filtered_items = [
+                    item
+                    for item in (self._to_item(row) for row in rows)
+                    if self._item_status(item) == normalized_status
+                ]
+                total = len(filtered_items)
+                page_count = max(1, (total + normalized_page_size - 1) // normalized_page_size)
+                safe_page = min(normalized_page, page_count)
+                start = (safe_page - 1) * normalized_page_size
+                return {
+                    "items": filtered_items[start:start + normalized_page_size],
+                    "total": total,
+                    "page": safe_page,
+                    "page_size": normalized_page_size,
+                    "page_count": page_count,
+                }
             total = int(
                 session.execute(
                     select(func.count()).select_from(SystemLogRow).where(*conditions)
@@ -1492,6 +1516,12 @@ class SQLAlchemySystemLogRepository(SystemLogRepository):
         if row.request_id:
             item["detail"].setdefault("request_id", row.request_id)
         return item
+
+    @staticmethod
+    def _item_status(item: dict[str, Any]) -> str:
+        detail = item.get("detail")
+        detail_status = detail.get("status") if isinstance(detail, dict) else ""
+        return _clean(item.get("status") or detail_status)
 
 
 class SQLAlchemyAuditLogRepository(AuditLogRepository):

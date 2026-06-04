@@ -185,6 +185,7 @@ def create_router(app_version: str) -> APIRouter:
             start_date: str = "",
             end_date: str = "",
             request_id: str = "",
+            status: str = "",
             page: int = 1,
             page_size: int = 50,
             authorization: str | None = Header(default=None),
@@ -203,6 +204,7 @@ def create_router(app_version: str) -> APIRouter:
             start_date=start_date.strip(),
             end_date=end_date.strip(),
             request_id=request_id.strip(),
+            status=status.strip(),
             page=page,
             page_size=page_size,
         )

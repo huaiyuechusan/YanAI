@@ -21,6 +21,12 @@ const LogType = {
   Audit: "audit",
 } as const;
 
+const LogStatus = {
+  All: "all",
+  Success: "success",
+  Failed: "failed",
+} as const;
+
 const typeLabels: Record<string, string> = {
   [LogType.Call]: "调用日志",
   [LogType.Account]: "账号管理日志",
@@ -52,6 +58,7 @@ function getStatus(item: SystemLog) {
 function LogsContent() {
   const [items, setItems] = useState<SystemLog[]>([]);
   const [type, setType] = useState<string>(LogType.Call);
+  const [status, setStatus] = useState<string>(LogStatus.All);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [detailLog, setDetailLog] = useState<SystemLog | null>(null);
@@ -72,7 +79,14 @@ function LogsContent() {
   const loadLogs = async (nextPage = page) => {
     setIsLoading(true);
     try {
-      const data = await fetchSystemLogs({ type, start_date: startDate, end_date: endDate, page: nextPage, page_size: pageSize });
+      const data = await fetchSystemLogs({
+        type,
+        status: isCallLog && status !== LogStatus.All ? status : undefined,
+        start_date: startDate,
+        end_date: endDate,
+        page: nextPage,
+        page_size: pageSize,
+      });
       setItems(data.items);
       setTotal(data.total);
       setPage(data.page || nextPage);
@@ -80,11 +94,12 @@ function LogsContent() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "加载日志失败");
     } finally {
-    setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
   const clearFilters = () => {
+    setStatus(LogStatus.All);
     setStartDate("");
     setEndDate("");
   };
@@ -96,7 +111,7 @@ function LogsContent() {
 
   useEffect(() => {
     void loadLogs(1);
-  }, [type, startDate, endDate]);
+  }, [type, status, startDate, endDate]);
 
   return (
     <section className="space-y-5">
@@ -114,6 +129,16 @@ function LogsContent() {
               <SelectItem value={LogType.Audit}>审计日志</SelectItem>
             </SelectContent>
           </Select>
+          {isCallLog ? (
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger className="h-10 w-[120px] rounded-xl border-stone-200 bg-white"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={LogStatus.All}>全部状态</SelectItem>
+                <SelectItem value={LogStatus.Success}>成功</SelectItem>
+                <SelectItem value={LogStatus.Failed}>失败</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : null}
           <DateRangeFilter startDate={startDate} endDate={endDate} onChange={(start, end) => { setStartDate(start); setEndDate(end); }} />
           <Button variant="outline" onClick={clearFilters} className="h-10 rounded-xl border-stone-200 bg-white px-4 text-stone-700">
             清除筛选条件
