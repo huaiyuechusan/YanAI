@@ -67,6 +67,22 @@ EXTERNAL_IMAGE_MODEL_ALIASES = {
     "gpt-image-2": ["codex-gpt-image-2"],
 }
 
+EXTERNAL_IMAGE_RATIO_SIZE_ALIASES = {
+    "1:1": "1024x1024",
+    "16:9": "1536x1024",
+    "4:3": "1536x1024",
+    "9:16": "1024x1536",
+    "3:4": "1024x1536",
+}
+
+EXTERNAL_IMAGE_RATIO_PROMPT_HINTS = {
+    "1:1": "输出为 1:1 正方形构图，主体居中，适合正方形画幅。",
+    "16:9": "输出为 16:9 横屏构图，适合宽画幅展示。",
+    "9:16": "输出为 9:16 竖屏构图，适合竖版画幅展示。",
+    "4:3": "输出为 4:3 比例，兼顾宽度与高度，适合展示画面细节。",
+    "3:4": "输出为 3:4 比例，纵向构图，适合人物肖像或竖向场景。",
+}
+
 
 def _dedupe_models(models: list[str]) -> list[str]:
     seen: set[str] = set()
@@ -78,6 +94,27 @@ def _dedupe_models(models: list[str]) -> list[str]:
         seen.add(model)
         result.append(model)
     return result
+
+
+def _is_explicit_image_size(value: str) -> bool:
+    width, separator, height = value.lower().partition("x")
+    return bool(separator and width.isdigit() and height.isdigit())
+
+
+def _normalize_external_image_request(prompt: object, size: object) -> tuple[str | None, str | None]:
+    normalized_prompt = _clean(prompt) or None
+    normalized_size = _clean(size)
+    if not normalized_size:
+        return normalized_prompt, None
+    if _is_explicit_image_size(normalized_size) or normalized_size.lower() == "auto":
+        return normalized_prompt, normalized_size.lower()
+    mapped_size = EXTERNAL_IMAGE_RATIO_SIZE_ALIASES.get(normalized_size)
+    if mapped_size:
+        hint = EXTERNAL_IMAGE_RATIO_PROMPT_HINTS.get(normalized_size)
+        if hint and normalized_prompt:
+            normalized_prompt = f"{normalized_prompt}\n\n{hint}"
+        return normalized_prompt, mapped_size
+    return normalized_prompt, normalized_size
 
 
 def _response_preview(response, limit: int = 300) -> str:
@@ -743,11 +780,16 @@ class ChannelService:
         return None
 
     def _call_generation(self, channel: dict[str, object], payload: dict[str, Any]) -> dict[str, Any]:
+        prompt, size = _normalize_external_image_request(payload.get("prompt"), payload.get("size"))
         body = {
             key: value
             for key, value in payload.items()
-            if key in {"prompt", "model", "n", "size", "response_format"} and value is not None
+            if key in {"model", "n", "response_format"} and value is not None
         }
+        if prompt is not None:
+            body["prompt"] = prompt
+        if size is not None:
+            body["size"] = size
         if "model" not in body:
             body["model"] = (channel.get("models") or ["gpt-image-1"])[0]
         response = self._session(channel).post(
@@ -758,14 +800,15 @@ class ChannelService:
         return self._normalize_response(response, payload)
 
     def _call_edit(self, channel: dict[str, object], payload: dict[str, Any]) -> dict[str, Any]:
+        prompt, size = _normalize_external_image_request(payload.get("prompt"), payload.get("size"))
         form_data = {
-            "prompt": _clean(payload.get("prompt")),
+            "prompt": prompt or "",
             "model": _clean(payload.get("model")) or (channel.get("models") or ["gpt-image-1"])[0],
             "n": str(int(payload.get("n") or 1)),
             "response_format": _clean(payload.get("response_format")) or "b64_json",
         }
-        if payload.get("size"):
-            form_data["size"] = _clean(payload.get("size"))
+        if size is not None:
+            form_data["size"] = size
         multipart = CurlMime()
         for key, value in form_data.items():
             if value is None:

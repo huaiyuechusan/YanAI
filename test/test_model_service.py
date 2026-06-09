@@ -342,6 +342,53 @@ class ModelServiceTest(unittest.TestCase):
             self.assertEqual(calls, ["personal_image_channel:user-a"])
             self.assertIn("个人渠道/Mine: 连接被上游重置", payload["_personal_channel_error"])
 
+    def test_external_generation_channel_normalizes_aspect_ratio_for_upstream(self) -> None:
+        class FakeResponse:
+            ok = True
+            status_code = 200
+            text = ""
+
+            def json(self):
+                return {"created": 1, "data": [{"url": "https://a.example/image.png"}]}
+
+        calls: dict[str, object] = {}
+
+        class FakeSession:
+            def post(self, url, **kwargs):
+                calls["url"] = url
+                calls["kwargs"] = kwargs
+                return FakeResponse()
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            storage = JSONStorageBackend(Path(tmp_dir) / "accounts.json")
+            storage.save_channels(
+                [
+                    {
+                        "id": "channel-a",
+                        "name": "A",
+                        "base_url": "https://a.example",
+                        "api_key": "sk-test",
+                        "models": ["gpt-image-2"],
+                    }
+                ]
+            )
+            service = ChannelService(storage, FakeConfigStore())
+            service._session = lambda channel: FakeSession()  # type: ignore[method-assign]
+
+            routed = service.call_generation({
+                "prompt": "draw",
+                "model": "gpt-image-2",
+                "n": 1,
+                "size": "9:16",
+                "response_format": "url",
+            })
+
+        self.assertIsNotNone(routed)
+        self.assertEqual(calls["url"], "https://a.example/v1/images/generations")
+        body = calls["kwargs"]["json"]
+        self.assertEqual(body["size"], "1024x1536")
+        self.assertEqual(body["prompt"], "draw\n\n输出为 9:16 竖屏构图，适合竖版画幅展示。")
+
     def test_personal_edit_channel_does_not_fall_back_to_global_channel(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             storage = JSONStorageBackend(Path(tmp_dir) / "accounts.json")
@@ -460,6 +507,72 @@ class ModelServiceTest(unittest.TestCase):
             {"name": "image", "filename": "input.png", "content_type": "image/png", "data": b"image-bytes"},
             parts,
         )
+
+    def test_external_edit_channel_normalizes_aspect_ratio_for_upstream(self) -> None:
+        class FakeResponse:
+            ok = True
+            status_code = 200
+            text = ""
+
+            def json(self):
+                return {"created": 1, "data": [{"url": "https://a.example/image.png"}]}
+
+        calls: dict[str, object] = {}
+
+        class FakeSession:
+            def post(self, url, **kwargs):
+                calls["url"] = url
+                calls["kwargs"] = kwargs
+                return FakeResponse()
+
+        mime_instances = []
+
+        class FakeCurlMime:
+            def __init__(self):
+                self.parts = []
+                self.closed = False
+                mime_instances.append(self)
+
+            def addpart(self, name, **kwargs):
+                self.parts.append({"name": name, **kwargs})
+
+            def close(self):
+                self.closed = True
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            storage = JSONStorageBackend(Path(tmp_dir) / "accounts.json")
+            storage.save_channels(
+                [
+                    {
+                        "id": "channel-a",
+                        "name": "A",
+                        "base_url": "https://a.example",
+                        "api_key": "sk-test",
+                        "models": ["gpt-image-2"],
+                    }
+                ]
+            )
+            service = ChannelService(storage, FakeConfigStore())
+            service._session = lambda channel: FakeSession()  # type: ignore[method-assign]
+
+            with mock.patch("services.channel_service.CurlMime", FakeCurlMime):
+                routed = service.call_edit({
+                    "prompt": "draw",
+                    "model": "gpt-image-2",
+                    "n": 2,
+                    "size": "9:16",
+                    "response_format": "url",
+                    "images": [(b"image-bytes", "input.png", "image/png")],
+                })
+
+        self.assertIsNotNone(routed)
+        self.assertEqual(calls["url"], "https://a.example/v1/images/edits")
+        parts = mime_instances[0].parts
+        self.assertIn(
+            {"name": "prompt", "data": "draw\n\n输出为 9:16 竖屏构图，适合竖版画幅展示。".encode("utf-8")},
+            parts,
+        )
+        self.assertIn({"name": "size", "data": b"1024x1536"}, parts)
 
     def test_channel_model_test_accepts_mapped_requested_model(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
