@@ -35,7 +35,7 @@ export function ProxySettingsCard() {
       const data = await testProxy(candidate);
       setTestResult(data.result);
       if (data.result.ok) {
-        toast.success(`Proxy available (${data.result.latency_ms} ms，HTTP ${data.result.status}）`);
+        toast.success(`Proxy available (${data.result.latency_ms} ms, HTTP ${data.result.status})`);
       } else {
         toast.error(`Proxy unavailable: ${data.result.error ?? "Unknown error"}`);
       }
@@ -96,7 +96,7 @@ export function ProxySettingsCard() {
               >
                 {testResult.ok
                   ? `Proxy available: HTTP ${testResult.status}, took ${testResult.latency_ms} ms`
-                  : `Proxy unavailable: ${testResult.error ?? "Unknown error"} (took ${testResult.latency_ms} ms）`}
+                  : `Proxy unavailable: ${testResult.error ?? "Unknown error"} (took ${testResult.latency_ms} ms)`}
               </div>
             ) : null}
 

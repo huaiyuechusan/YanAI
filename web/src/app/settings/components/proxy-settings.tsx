@@ -72,7 +72,7 @@ export function ProxySettingsCard() {
       setFormEnabled(data.proxy.enabled);
       toast.success("Proxy configuration saved");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "SaveFailed");
+      toast.error(error instanceof Error ? error.message : "Save failed");
     } finally {
       setIsSaving(false);
     }
@@ -90,7 +90,7 @@ export function ProxySettingsCard() {
       const data = await testProxy(candidate);
       setTestResult(data.result);
       if (data.result.ok) {
-        toast.success(`Proxy available (${data.result.latency_ms} ms，HTTP ${data.result.status}）`);
+        toast.success(`Proxy available (${data.result.latency_ms} ms, HTTP ${data.result.status})`);
       } else {
         toast.error(`Proxy unavailable: ${data.result.error ?? "Unknown error"}`);
       }
@@ -168,7 +168,7 @@ export function ProxySettingsCard() {
                     Proxy available: HTTP {testResult.status}, took {testResult.latency_ms} ms
                   </>
                 ) : (
-                  <>Proxy unavailable: {testResult.error ?? "Unknown error"} (took {testResult.latency_ms} ms）</>
+                  <>Proxy unavailable: {testResult.error ?? "Unknown error"} (took {testResult.latency_ms} ms)</>
                 )}
               </div>
             ) : null}

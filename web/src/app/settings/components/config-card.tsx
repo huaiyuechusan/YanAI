@@ -60,7 +60,7 @@ export function ConfigCard() {
       await navigator.clipboard.writeText(linuxDoCallbackUrl);
       toast.success("Linux DO callback URL copied");
     } catch {
-      toast.error("CopyFailed");
+      toast.error("Copy failed");
     }
   };
 
@@ -76,7 +76,7 @@ export function ConfigCard() {
       const data = await testProxy(candidate);
       setProxyTestResult(data.result);
       if (data.result.ok) {
-        toast.success(`Proxy available (${data.result.latency_ms} ms，HTTP ${data.result.status}）`);
+        toast.success(`Proxy available (${data.result.latency_ms} ms, HTTP ${data.result.status})`);
       } else {
         toast.error(`Proxy unavailable: ${data.result.error ?? "Unknown error"}`);
       }
@@ -136,7 +136,7 @@ export function ConfigCard() {
               >
                 {proxyTestResult.ok
                   ? `Proxy available: HTTP ${proxyTestResult.status}, took ${proxyTestResult.latency_ms} ms`
-                  : `Proxy unavailable: ${proxyTestResult.error ?? "Unknown error"} (took ${proxyTestResult.latency_ms} ms）`}
+                  : `Proxy unavailable: ${proxyTestResult.error ?? "Unknown error"} (took ${proxyTestResult.latency_ms} ms)`}
               </div>
             ) : null}
             <div className="flex justify-end">

@@ -137,7 +137,7 @@ function UsersPageContent() {
     setSelectedIds([]);
   };
 
-  const openDelete Users = (users: AdminUser[]) => {
+  const openDeleteUsers = (users: AdminUser[]) => {
     if (users.length === 0) {
       toast.error("Select users to delete first");
       return;
@@ -145,7 +145,7 @@ function UsersPageContent() {
     setDeleteTarget(users);
   };
 
-  const handleDelete Users = async () => {
+  const handleDeleteUsers = async () => {
     if (!deleteTarget || deleteTarget.length === 0) return;
     setIsDeleting(true);
     try {
@@ -225,7 +225,7 @@ function UsersPageContent() {
             <Button
               variant="ghost"
               className="h-8 rounded-lg px-3 text-rose-500 hover:bg-rose-50 hover:text-rose-600"
-              onClick={() => openDelete Users(selectedUsers)}
+              onClick={() => openDeleteUsers(selectedUsers)}
               disabled={selectedUsers.length === 0 || isDeleting}
             >
               {isDeleting ? <LoaderCircle className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
@@ -300,7 +300,7 @@ function UsersPageContent() {
                     variant="ghost"
                     size="icon"
                     className="size-8 text-rose-500 hover:bg-rose-50"
-                    onClick={() => openDelete Users([user])}
+                    onClick={() => openDeleteUsers([user])}
                     aria-label="Delete User"
                     title="Delete User"
                   >
@@ -326,7 +326,7 @@ function UsersPageContent() {
             <Button variant="outline" className="rounded-xl border-stone-200 bg-white" onClick={() => setDeleteTarget(null)} disabled={isDeleting}>
               Cancel
             </Button>
-            <Button variant="destructive" className="rounded-xl" onClick={() => void handleDelete Users()} disabled={isDeleting}>
+            <Button variant="destructive" className="rounded-xl" onClick={() => void handleDeleteUsers()} disabled={isDeleting}>
               {isDeleting ? <LoaderCircle className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
               Delete
             </Button>

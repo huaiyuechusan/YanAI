@@ -228,7 +228,7 @@ function MyImagesContent() {
     setDeleteTarget(selectedTargets);
   };
 
-  const handleDelete Images = async () => {
+  const handleDeleteImages = async () => {
     if (!deleteTarget || deleteTarget.length === 0) return;
     setIsDeleting(true);
     try {
@@ -239,7 +239,7 @@ function MyImagesContent() {
       toast.success(`Deleted ${data.removed} imagesImages`);
       await loadImages();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Delete ImagesFailed");
+      toast.error(error instanceof Error ? error.message : "Failed to delete images");
     } finally {
       setIsDeleting(false);
     }
@@ -470,7 +470,7 @@ function MyImagesContent() {
             <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={isDeleting}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={() => void handleDelete Images()} disabled={isDeleting}>
+            <Button variant="destructive" onClick={() => void handleDeleteImages()} disabled={isDeleting}>
               {isDeleting ? <LoaderCircle className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
               Delete
             </Button>

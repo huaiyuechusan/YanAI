@@ -573,7 +573,7 @@ function summarizeBananaPrompt(item: PromptPickerItem) {
 
   const firstSentence =
     cleaned
-      .split(/(?<=[.！？.!?])\s+/)
+      .split(/(?<=[.!?])\s+/)
       .find((sentence) => sentence.length >= 10)
       ?.trim() || cleaned;
 

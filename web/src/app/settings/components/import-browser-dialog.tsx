@@ -136,7 +136,7 @@ export function ImportBrowserDialog() {
         <div className="flex items-center justify-between text-sm text-stone-500">
           <span>
             Page {filteredFiles.length === 0 ? 0 : (safeFilePage - 1) * currentPageSize + 1} -{" "}
-            {Math.min(safeFilePage * currentPageSize, filteredFiles.length)} items，Total {filteredFiles.length} items
+            {Math.min(safeFilePage * currentPageSize, filteredFiles.length)} items, total {filteredFiles.length} items
           </span>
           <div className="flex items-center gap-2">
             <Button
