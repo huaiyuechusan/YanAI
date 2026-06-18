@@ -79,6 +79,35 @@ environment:
   - DATABASE_URL=postgresql://user:password@host:5432/dbname
 ```
 
+### 反向代理与流式输出
+
+如果通过 Nginx、宝塔、CDN 或平台网关暴露给第三方客户端，建议关闭 SSE 缓冲和压缩，否则客户端可能只看到空消息或等到请求结束才显示：
+
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:3001;
+    proxy_http_version 1.1;
+    proxy_buffering off;
+    proxy_request_buffering off;
+    proxy_cache off;
+    gzip off;
+    proxy_set_header Connection "";
+    proxy_read_timeout 3600s;
+    proxy_send_timeout 3600s;
+    add_header X-Accel-Buffering no always;
+    add_header Cache-Control "no-cache, no-transform" always;
+}
+```
+
+Windows `cmd.exe` 测试流式文本接口时需要转义 JSON 双引号：
+
+```cmd
+curl.exe -N "http://127.0.0.1:8000/v1/chat/completions" ^
+  -H "Authorization: Bearer <auth-key>" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"model\":\"gpt-5-5\",\"stream\":true,\"messages\":[{\"role\":\"user\",\"content\":\"你好\"}]}"
+```
+
 ### 迁移前保护和审计
 
 从旧 JSON 存储迁移到 SQLite、PostgreSQL 或 Git 前，必须先停写。Docker 部署请先停止 YanAI 容器，确认没有后台任务继续写入 `data/*.json`：
@@ -123,6 +152,8 @@ python scripts/migrate_storage.py --from json --to postgres --verify-only
 - 兼容 `POST /v1/images/generations` 图片生成接口
 - 兼容 `POST /v1/images/edits` 图片编辑接口
 - 管理员密钥可调用 `POST /v1/chat/completions`、`POST /v1/responses` 与 `POST /v1/messages`
+- `POST /v1/chat/completions` 和 `POST /v1/responses` 支持文本流式输出，并兼容 ChatGPT 上游多种 SSE 文本 patch 格式
+- 流式接口会返回 `Cache-Control: no-cache, no-transform` 与 `X-Accel-Buffering: no`，便于通过 Nginx 等反向代理接入第三方客户端
 - `GET /v1/models` 会返回上游模型列表，并补充内置默认模型 `gpt-5`、`gpt-5-1`、`gpt-5-2`、`gpt-5-3`、`gpt-5-3-mini`、`gpt-5-5`、`gpt-5-mini`、`gpt-image-2`、`codex-gpt-image-2`、`auto`
 - 图片接口支持 `n=1-4`，前端工作台会按张数拆分任务执行
 - 支持内置账号池与 OpenAI 图片兼容外部渠道，按模型、权重、优先级进行路由
@@ -152,7 +183,8 @@ python scripts/migrate_storage.py --from json --to postgres --verify-only
 - 自动刷新账号邮箱、类型、额度和恢复时间
 - 轮询可用账号执行图片生成与图片编辑
 - 遇到 Token 失效类错误时自动剔除无效 Token
-- 定时检查限流账号并自动刷新
+- 按设置页「账号刷新间隔」定时刷新全部账号信息、额度和恢复时间
+- 文本调用会跳过 `禁用`、`限流`、`异常` 账号，避免选中不可用账号导致空输出
 - 支持网页端配置全局 HTTP / HTTPS / SOCKS5 / SOCKS5H 代理
 - 支持搜索、筛选、批量刷新、导出、手动编辑和清理账号
 - 支持四种导入方式：本地 CPA JSON 文件导入、远程 CPA 服务器导入、`sub2api` 服务器导入、`access_token` 导入
@@ -199,6 +231,7 @@ python scripts/migrate_storage.py --from json --to postgres --verify-only
 - 普通用户图片额度改为请求级预扣：任务开始前按 `request_id` 预留额度，成功后按实际生成数量确认，失败或无结果时释放，过期预留由后台 watcher 返还；管理员调用不占用个人额度
 - 有效个人生图渠道会跳过本地额度预扣，图片记录的 `quota_cost` 记为 0；若该个人渠道配置错误、模型不匹配或上游调用失败，请求直接返回个人渠道错误，不会继续使用内置账号池
 - 账号池改为图片任务租约模型，支持 `max_concurrency`、`inflight_count`、`lease_owner`、`lease_owners` 和 `leased_until`，租用成功后再调用上游，结束时释放并更新成功、失败、额度和限流状态；PostgreSQL 下会使用行级锁避免多个任务抢占同一账号
+- 后台 `account-refresh-watcher` 会按配置间隔刷新全部账号，便于同步邮箱、类型、额度、恢复时间和状态；`quota-reservation-watcher` 会继续释放过期额度预留
 - 图片记录改为逐条插入并使用 UUID 记录 ID，支持按用户、日期、渠道和 `request_id` 分页查询，避免多人同时生成图片时整表覆盖导致记录丢失
 - 兑换码兑换、渠道更新、提示词新增和系统设置已接入数据库 Repository：单次兑换码并发兑换只能成功一次，不同渠道或提示词的并发管理操作不会互相覆盖
 - 请求链路加入 `x-request-id` / `request_id`，贯穿 API 调用、额度预留、账号租约、图片记录、系统日志和审计日志；`/api/storage/info` 和健康检查可查看当前存储后端与数据集状态
@@ -360,7 +393,23 @@ curl http://localhost:8000/v1/images/edits \
 <summary><code>POST /v1/chat/completions</code></summary>
 <br>
 
-面向图片场景的 Chat Completions 兼容接口，不是完整通用聊天代理。
+Chat Completions 兼容接口。文本模型会走 ChatGPT 文本对话链路；图片模型或 `modalities` 包含 `image` 时会走图片工作流。
+
+```bash
+curl http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <auth-key>" \
+  -d '{
+    "model": "gpt-5-5",
+    "messages": [
+      {
+        "role": "user",
+        "content": "你好，请简单介绍一下你自己"
+      }
+    ],
+    "stream": true
+  }'
+```
 
 ```bash
 curl http://localhost:8000/v1/chat/completions \
@@ -384,10 +433,11 @@ curl http://localhost:8000/v1/chat/completions \
 
 | 字段         | 说明                |
 |:-----------|:------------------|
-| `model`    | 图片模型，默认按图片生成场景处理  |
-| `messages` | 消息数组，需要是图片相关请求内容  |
-| `n`        | 生成数量，按当前实现解析为图片数量 |
-| `stream`   | 已实现，但仍在测试         |
+| `model`    | 文本模型走文本对话链路；`gpt-image-2` / `codex-gpt-image-2` 走图片链路 |
+| `messages` | OpenAI Chat Completions 消息数组 |
+| `prompt`   | 兼容字段；未传 `messages` 时可作为用户输入 |
+| `n`        | 图片链路生成数量，当前后端限制为 `1-4` |
+| `stream`   | 支持流式输出；反向代理需关闭缓冲 |
 
 <br>
 </details>
@@ -397,7 +447,18 @@ curl http://localhost:8000/v1/chat/completions \
 <summary><code>POST /v1/responses</code></summary>
 <br>
 
-面向图片生成工具调用的 Responses API 兼容接口，不是完整通用 Responses API 代理。
+Responses API 兼容接口。未传 `image_generation` 工具时走文本输出；传入图片生成工具时走图片工作流。
+
+```bash
+curl http://localhost:8000/v1/responses \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <auth-key>" \
+  -d '{
+    "model": "gpt-5",
+    "input": "你好，请简单介绍一下你自己",
+    "stream": true
+  }'
+```
 
 ```bash
 curl http://localhost:8000/v1/responses \
@@ -420,10 +481,11 @@ curl http://localhost:8000/v1/responses \
 
 | 字段       | 说明                            |
 |:---------|:------------------------------|
-| `model`  | 响应中会回显该模型字段，但图片生成当前仍走图片生成兼容逻辑 |
-| `input`  | 输入内容，需要能解析出图片生成提示词            |
-| `tools`  | 必须包含 `image_generation` 工具请求  |
-| `stream` | 已实现，但仍在测试                     |
+| `model`  | 文本链路按传入模型调用；图片工具链路会回显该模型字段 |
+| `input`  | 文本输入或 Responses 消息数组；图片工具链路需要能解析出图片生成提示词 |
+| `instructions` | 可选系统指令，会合并到文本链路消息中 |
+| `tools`  | 包含 `image_generation` 时触发图片生成工具调用 |
+| `stream` | 支持流式输出；反向代理需关闭缓冲 |
 
 <br>
 </details>
