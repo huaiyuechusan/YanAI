@@ -1,4 +1,5 @@
 import base64
+import json
 import os
 import re
 import time
@@ -376,8 +377,8 @@ class OpenAIBackendAPI:
             headers["X-Oai-Turn-Trace-Id"] = new_uuid()
         return self._headers(path, headers)
 
-    def _prepare_image_conversation(self, prompt: str, requirements: ChatRequirements, model: str) -> str:
-        """为图片生成准备 conduit token。"""
+    def _prepare_image_conversation(self, prompt: str, requirements: ChatRequirements, model: str) -> tuple[str, str]:
+        """为图片生成准备 conduit token，并保留异步会话 id。"""
         path = "/backend-api/f/conversation/prepare"
         payload = {
             "action": "next",
@@ -405,7 +406,10 @@ class OpenAIBackendAPI:
             timeout=60,
         )
         ensure_ok(response, path)
-        return response.json().get("conduit_token", "")
+        data = response.json()
+        if not isinstance(data, dict):
+            return "", ""
+        return str(data.get("conduit_token") or ""), str(data.get("conversation_id") or "")
 
     def _decode_image_base64(self, image: str) -> bytes:
         """把 base64 图片字符串或本地路径解码成二进制。"""
@@ -820,9 +824,15 @@ class OpenAIBackendAPI:
         references = [self._upload_image(image, f"image_{idx}.png") for idx, image in enumerate(images, start=1)]
         self._bootstrap()
         requirements = self._get_chat_requirements()
-        conduit_token = self._prepare_image_conversation(prompt, requirements, model)
+        conduit_token, conversation_id = self._prepare_image_conversation(prompt, requirements, model)
         response = self._start_image_generation(prompt, requirements, conduit_token, model, references)
         try:
+            if conversation_id:
+                yield json.dumps(
+                    {"type": "image_prepare", "conversation_id": conversation_id},
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                )
             yield from iter_sse_payloads(response)
         finally:
             response.close()

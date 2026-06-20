@@ -389,6 +389,24 @@ def is_text_patch_path(path: object) -> bool:
     return bool(re.match(r"^/message/content(?:/.*)?$", text))
 
 
+def is_upstream_control_text(value: object) -> bool:
+    text = str(value or "").strip() if isinstance(value, str) else ""
+    if not text:
+        return False
+    if "referenced_image_ids" in text or "referenced_image_urls" in text:
+        return True
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        return False
+    return isinstance(parsed, dict) and bool(parsed.get("skipped_mainline"))
+
+
+def is_image_turn_use_case(value: object) -> bool:
+    text = re.sub(r"[_-]+", " ", str(value or "").strip().lower())
+    return "image" in text or "picture" in text
+
+
 def apply_text_patch(event: dict[str, Any], current_text: str = "", history_text: str = "") -> str:
     if is_text_patch_path(event.get("p")):
         return apply_patch_op(event, current_text, history_text)
@@ -398,6 +416,8 @@ def apply_text_patch(event: dict[str, Any], current_text: str = "", history_text
 
     operations = event.get("v")
     if isinstance(operations, str) and not event.get("p") and not event.get("o"):
+        if is_upstream_control_text(operations):
+            return current_text
         return current_text + operations
 
     if event.get("o") == "patch" and isinstance(operations, list):
@@ -420,6 +440,8 @@ def apply_text_patch(event: dict[str, Any], current_text: str = "", history_text
 def apply_patch_op(operation: dict[str, Any], current_text: str, history_text: str = "") -> str:
     op = operation.get("o")
     value = content_value_text(operation.get("v"))
+    if is_upstream_control_text(value):
+        return current_text
     if op in {"add", "append"}:
         return current_text + value
     if op == "replace":
@@ -605,7 +627,11 @@ def stream_image_outputs(
     file_ids = [str(item) for item in last.get("file_ids") or []]
     sediment_ids = [str(item) for item in last.get("sediment_ids") or []]
     message = str(last.get("text") or "").strip()
-    is_text_response = last.get("tool_invoked") is False or last.get("turn_use_case") == "text"
+    image_turn = is_image_turn_use_case(last.get("turn_use_case"))
+    is_text_response = (
+        str(last.get("turn_use_case") or "").strip().lower() == "text"
+        or (last.get("tool_invoked") is False and not image_turn)
+    )
     logger.info({
         "event": "image_stream_resolve_start",
         "conversation_id": conversation_id,
@@ -635,8 +661,16 @@ def stream_image_outputs(
             yield ImageOutput(kind="result", model=request.model, index=index, total=total, data=data)
         return
 
-    if message:
+    if message and not image_turn:
         yield ImageOutput(kind="message", model=request.model, index=index, total=total, text=message)
+        return
+
+    raise ImageGenerationError(
+        "image generation timed out before returning an image result",
+        status_code=504,
+        error_type="server_error",
+        code="image_generation_timeout",
+    )
 
 
 def stream_image_outputs_with_pool(request: ConversationRequest) -> Iterator[ImageOutput]:
