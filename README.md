@@ -1,5 +1,7 @@
 <h1 align="center">颜AI</h1>
 
+<p align="center"><img src="assets/readme/hero.svg" alt="颜AI 自托管图片创作工作台" width="100%"></p>
+
 <p align="center">颜AI 是一个围绕 ChatGPT 图片能力封装的自托管图片创作与管理系统，提供 OpenAI 兼容图片 API、在线画图工作台、图生图预设、账号池轮询、个人用户额度、渠道管理、模型管理、计费标准配置、图片归档、日志与 Docker 部署能力。</p>
 
 > [!WARNING]

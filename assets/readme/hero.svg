@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+  <title id="title">颜AI self-hosted image workspace</title>
+  <desc id="desc">A dark blue-gray product title board with an image creation workflow.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#111827"/>
+      <stop offset="1" stop-color="#26364b"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1d2a3c"/>
+      <stop offset="1" stop-color="#172234"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="520" rx="18" fill="url(#bg)"/>
+  <path d="M0 414H1200" stroke="#3a4b61" stroke-width="1" opacity=".7"/>
+  <circle cx="102" cy="96" r="4" fill="#e2b66d"/>
+  <circle cx="122" cy="96" r="4" fill="#83c5be"/>
+  <circle cx="142" cy="96" r="4" fill="#a9c8e8"/>
+  <text x="100" y="205" fill="#f5f7fb" font-family="Arial, Microsoft YaHei, sans-serif" font-size="76" font-weight="700">颜AI</text>
+  <text x="104" y="253" fill="#b9c6d8" font-family="Arial, Microsoft YaHei, sans-serif" font-size="22">把图片生成、编辑、路由与归档放进自己的控制台</text>
+  <rect x="100" y="300" width="166" height="36" rx="18" fill="#e2b66d"/>
+  <text x="183" y="324" text-anchor="middle" fill="#182233" font-family="Arial, sans-serif" font-size="14" font-weight="700">OpenAI-compatible</text>
+  <rect x="278" y="300" width="122" height="36" rx="18" fill="#83c5be"/>
+  <text x="339" y="324" text-anchor="middle" fill="#182233" font-family="Arial, sans-serif" font-size="14" font-weight="700">Docker-ready</text>
+  <rect x="412" y="300" width="112" height="36" rx="18" fill="#a9c8e8"/>
+  <text x="468" y="324" text-anchor="middle" fill="#182233" font-family="Arial, sans-serif" font-size="14" font-weight="700">Multi-user</text>
+  <rect x="670" y="70" width="430" height="310" rx="14" fill="url(#panel)" stroke="#52647b"/>
+  <rect x="696" y="98" width="196" height="132" rx="8" fill="#d9b1a4"/>
+  <path d="M696 190c38-35 60-26 89-53 29-26 62 2 107-30v123H696Z" fill="#b46f71" opacity=".65"/>
+  <circle cx="829" cy="145" r="26" fill="#f1d2bc" opacity=".9"/>
+  <rect x="914" y="98" width="158" height="12" rx="6" fill="#6e829d"/>
+  <rect x="914" y="122" width="132" height="9" rx="4" fill="#4e6078"/>
+  <rect x="914" y="143" width="105" height="9" rx="4" fill="#4e6078"/>
+  <rect x="696" y="253" width="376" height="52" rx="8" fill="#111a29" stroke="#42536a"/>
+  <text x="716" y="283" fill="#aebed1" font-family="monospace" font-size="14">prompt → route → generate → archive</text>
+  <rect x="696" y="326" width="120" height="28" rx="6" fill="#e2b66d"/>
+  <text x="756" y="345" text-anchor="middle" fill="#182233" font-family="Arial, sans-serif" font-size="13" font-weight="700">生成图片</text>
+  <text x="100" y="458" fill="#7f91a9" font-family="monospace" font-size="13">YANAI / SELF-HOSTED CREATIVE CONSOLE</text>
+</svg>
