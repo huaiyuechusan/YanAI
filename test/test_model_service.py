@@ -343,6 +343,48 @@ class ModelServiceTest(unittest.TestCase):
             self.assertEqual(calls, ["personal_image_channel:user-a"])
             self.assertEqual(routed[1], "个人渠道/Mine")
 
+    def test_disabled_personal_generation_channel_falls_back_to_global_channel(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            storage = JSONStorageBackend(Path(tmp_dir) / "accounts.json")
+            storage.save_channels(
+                [
+                    {
+                        "id": "channel-a",
+                        "name": "Global",
+                        "base_url": "https://global.example",
+                        "api_key": "sk-global",
+                        "models": ["gpt-image-2"],
+                    }
+                ]
+            )
+            service = ChannelService(storage, FakeConfigStore())
+            calls: list[str] = []
+
+            def fake_generation(channel, payload):
+                calls.append(str(channel.get("id")))
+                return {"created": 1, "data": [{"url": "https://global.example/image.png"}]}
+
+            service._call_generation = fake_generation  # type: ignore[method-assign]
+            routed = service.call_generation(
+                {
+                    "prompt": "draw",
+                    "model": "gpt-image-2",
+                    "n": 1,
+                    "_owner_user_id": "user-a",
+                    "_personal_image_channel": {
+                        "enabled": False,
+                        "name": "Mine",
+                        "base_url": "https://personal.example",
+                        "api_key": "sk-personal",
+                        "models": ["gpt-image-2"],
+                    },
+                }
+            )
+
+            self.assertIsNotNone(routed)
+            self.assertEqual(calls, ["channel-a"])
+            self.assertEqual(routed[1], "Global")
+
     def test_personal_generation_channel_does_not_fall_back_to_global_channel(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             storage = JSONStorageBackend(Path(tmp_dir) / "accounts.json")
@@ -477,6 +519,81 @@ class ModelServiceTest(unittest.TestCase):
             self.assertIsNone(routed)
             self.assertEqual(calls, ["personal_image_channel:user-a"])
             self.assertIn("个人渠道/Mine: 连接被上游重置", payload["_personal_channel_error"])
+
+    def test_disabled_personal_edit_channel_falls_back_to_global_channel(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            storage = JSONStorageBackend(Path(tmp_dir) / "accounts.json")
+            storage.save_channels(
+                [
+                    {
+                        "id": "channel-a",
+                        "name": "Global",
+                        "base_url": "https://global.example",
+                        "api_key": "sk-global",
+                        "models": ["gpt-image-2"],
+                    }
+                ]
+            )
+            service = ChannelService(storage, FakeConfigStore())
+            calls: list[str] = []
+
+            def fake_edit(channel, payload):
+                calls.append(str(channel.get("id")))
+                return {"created": 1, "data": [{"url": "https://global.example/edit.png"}]}
+
+            service._call_edit = fake_edit  # type: ignore[method-assign]
+            routed = service.call_edit(
+                {
+                    "prompt": "draw",
+                    "model": "gpt-image-2",
+                    "n": 1,
+                    "_owner_user_id": "user-a",
+                    "_personal_image_channel": {
+                        "enabled": False,
+                        "name": "Mine",
+                        "base_url": "https://personal.example",
+                        "api_key": "sk-personal",
+                        "models": ["gpt-image-2"],
+                    },
+                }
+            )
+
+            self.assertIsNotNone(routed)
+            self.assertEqual(calls, ["channel-a"])
+            self.assertEqual(routed[1], "Global")
+
+    def test_external_edit_524_marks_attempted_channel_and_friendly_error(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            storage = JSONStorageBackend(Path(tmp_dir) / "accounts.json")
+            storage.save_channels(
+                [
+                    {
+                        "id": "channel-a",
+                        "name": "codex",
+                        "base_url": "https://global.example",
+                        "api_key": "sk-global",
+                        "models": ["gpt-image-2"],
+                    }
+                ]
+            )
+            service = ChannelService(storage, FakeConfigStore())
+            payload = {
+                "prompt": "draw",
+                "model": "gpt-image-2",
+                "n": 1,
+                "_owner_user_id": "user-a",
+                "_personal_image_channel": {"enabled": False},
+            }
+
+            def fake_edit(channel, routed_payload):
+                raise RuntimeError("HTTP 524: error code: 524")
+
+            service._call_edit = fake_edit  # type: ignore[method-assign]
+            routed = service.call_edit(payload)
+
+            self.assertIsNone(routed)
+            self.assertTrue(payload["_external_channel_attempted"])
+            self.assertIn("codex: 外部渠道返回 HTTP 524", payload["_channel_error"])
 
     def test_external_edit_channel_uses_curl_mime_multipart(self) -> None:
         class FakeResponse:

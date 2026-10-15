@@ -137,6 +137,11 @@ def _response_preview(response, limit: int = 300) -> str:
 def _friendly_channel_error(error: object) -> str:
     message = _clean(error)
     normalized = message.lower()
+    if "http 524" in normalized or "error code: 524" in normalized:
+        return (
+            "外部渠道返回 HTTP 524（网关等待上游超时）。渠道后台可能已经收到任务，"
+            "但本服务没有拿到最终图片结果；请调大渠道超时，或改用支持异步结果查询的渠道。"
+        )
     if "curl: (35)" in normalized or "connection was reset" in normalized or "recv failure" in normalized:
         return (
             "连接被上游重置（curl 35）。请检查外部渠道 Base URL 是否正确、API Key 是否有效、"
@@ -694,7 +699,7 @@ class ChannelService:
                     "ok": False,
                     "image_count": 0,
                     "latency_ms": int((time.monotonic() - model_started_at) * 1000),
-                    "error": str(exc),
+                    "error": _friendly_channel_error(exc),
                 })
 
         ok = bool(tested_models) and not failed_models
@@ -892,6 +897,7 @@ class ChannelService:
             resolved_model = self._resolve_external_model_for_channel(channel, model)
             routed_payload = {**payload, "model": resolved_model or model}
             try:
+                payload["_external_channel_attempted"] = True
                 return self._call_generation(channel, routed_payload), self._channel_result_name(channel)
             except Exception as exc:
                 error = _friendly_channel_error(exc)
@@ -928,6 +934,7 @@ class ChannelService:
             resolved_model = self._resolve_external_model_for_channel(channel, model)
             routed_payload = {**payload, "model": resolved_model or model}
             try:
+                payload["_external_channel_attempted"] = True
                 return self._call_edit(channel, routed_payload), self._channel_result_name(channel)
             except Exception as exc:
                 error = _friendly_channel_error(exc)
@@ -1018,9 +1025,16 @@ class ChannelService:
     def _normalize_response(response, original_payload: dict[str, Any]) -> dict[str, Any]:
         if not response.ok:
             raise RuntimeError(f"HTTP {response.status_code}: {response.text[:300]}")
-        payload = response.json()
+        try:
+            payload = response.json()
+        except ValueError as exc:
+            raise RuntimeError("channel response is not valid JSON") from exc
         if not isinstance(payload, dict):
             raise RuntimeError("channel response is invalid")
+        error = payload.get("error")
+        if error:
+            message = _clean(error.get("message")) if isinstance(error, dict) else _clean(error)
+            raise RuntimeError(f"channel error: {message or error}")
         data = payload.get("data")
         if not isinstance(data, list):
             raise RuntimeError("channel response missing data")
@@ -1042,7 +1056,7 @@ class ChannelService:
         if encoded_items:
             from services.protocol.conversation import format_image_result
 
-            result = format_image_result(
+            normalized = format_image_result(
                 encoded_items,
                 _clean(original_payload.get("prompt")),
                 _clean(original_payload.get("response_format")) or "url",
@@ -1050,9 +1064,9 @@ class ChannelService:
                 storage_identity=storage_identity,
             )
             if url_items:
-                result["data"].extend(url_items)
-            return result
-        normalized = {"created": int(payload.get("created") or datetime.now().timestamp()), "data": url_items}
+                normalized["data"].extend(url_items)
+        else:
+            normalized = {"created": int(payload.get("created") or datetime.now().timestamp()), "data": url_items}
         if not normalized["data"]:
             # Some compatible servers return a raw base64 string in `data`.
             from services.protocol.conversation import format_image_result
@@ -1068,6 +1082,8 @@ class ChannelService:
                         storage_identity=storage_identity,
                     )["data"]
                     normalized["data"].extend(converted)
+        if not ChannelService._image_result_count(normalized):
+            raise RuntimeError("generation response contains no image")
         return normalized
 
 

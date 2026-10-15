@@ -176,13 +176,18 @@ def create_router() -> APIRouter:
             headers=SSE_RESPONSE_HEADERS,
         )
 
-    def require_internal_pool_enabled(external_error: object = None) -> None:
+    def require_internal_pool_enabled(payload: dict[str, object], call: LoggedCall) -> None:
         if not channel_service.is_internal_pool_enabled():
-            message = "internal account pool is disabled and no external channel completed the request"
-            if external_error:
-                message = f"{message}: {external_error}"
+            external_error = payload.get("_channel_error")
+            attempted = bool(payload.get("_external_channel_attempted") or external_error)
+            if attempted:
+                message = f"外部生图渠道调用失败，内置账号池已禁用：{external_error or '上游未返回图片'}"
+            else:
+                model = str(payload.get("model") or "gpt-image-2")
+                message = f"内置账号池已禁用，未找到支持模型 {model} 的已启用外部渠道，请检查渠道开关和模型配置"
+            call.log("渠道调用失败", status="failed", error=message)
             raise HTTPException(
-                status_code=503,
+                status_code=502 if attempted else 503,
                 detail={"error": message},
             )
 
@@ -246,7 +251,7 @@ def create_router() -> APIRouter:
                     return external_image_stream_response(result)
                 return result
             require_personal_channel_success(payload)
-            require_internal_pool_enabled(payload.get("_channel_error"))
+            require_internal_pool_enabled(payload, call)
             result = await call.run(
                 openai_v1_image_generations.handle,
                 payload,
@@ -342,7 +347,7 @@ def create_router() -> APIRouter:
                     return external_image_stream_response(result)
                 return result
             require_personal_channel_success(payload)
-            require_internal_pool_enabled(payload.get("_channel_error"))
+            require_internal_pool_enabled(payload, call)
             result = await call.run(
                 openai_v1_image_edit.handle,
                 payload,

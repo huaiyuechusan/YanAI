@@ -377,6 +377,7 @@ function ChannelsContent() {
   const isEditingInternal = editingChannel?.id === "internal_pool";
   const candidateTestModels = uniqueModels(modelTestChannel?.models);
   const selectedTestModelSet = new Set(selectedTestModels);
+  const modelTestResult = modelTestChannel ? testResults[modelTestChannel.id] : undefined;
 
   return (
     <section className="space-y-5">
@@ -585,6 +586,7 @@ function ChannelsContent() {
             <DialogTitle>选择生图测试模型</DialogTitle>
             <DialogDescription className="leading-6 text-stone-500">
               {modelTestChannel ? `${modelTestChannel.name} · ${channelTypeLabel(modelTestChannel)}` : "选择要测试的模型"}
+              <span className="block">每个所选模型会实际生成一张测试图片，可能产生渠道费用；收到图片后才算通过。</span>
             </DialogDescription>
           </DialogHeader>
 
@@ -630,6 +632,25 @@ function ChannelsContent() {
                 该渠道还没有配置可勾选的模型。
               </div>
             )}
+
+            <div role="status" aria-live="polite" className="space-y-2 text-sm">
+              {modelTestChannel && testingChannelId === modelTestChannel.id ? (
+                <p className="text-stone-500">正在向渠道发送生图请求，请等待图片结果…</p>
+              ) : modelTestResult ? (
+                <div className="space-y-2 rounded-lg border border-rose-100 bg-white/70 p-3">
+                  <p className="font-medium text-stone-700">上次测试结果 · {modelTestResult.latency_ms}ms</p>
+                  {modelTestResult.results?.map((result) => (
+                    <div key={result.model} className={result.ok ? "text-emerald-700" : "text-rose-600"}>
+                      <p className="break-words">{result.model}：{result.ok ? `通过，返回 ${result.image_count} 张图片` : "失败"}</p>
+                      {result.error ? <p className="mt-1 break-words text-xs leading-5">{result.error}</p> : null}
+                    </div>
+                  ))}
+                  {!modelTestResult.results?.length && modelTestResult.error ? (
+                    <p className="break-words text-rose-600">{modelTestResult.error}</p>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
           </div>
 
           <DialogFooter className="border-t border-rose-100 px-5 py-4 sm:px-6">
